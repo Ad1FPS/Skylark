@@ -1,11 +1,15 @@
 import "./styles.css";
+import "./styles/cards.css";
+import "./styles/sidebar.css";
 import type { Location, WeatherBundle } from "./types";
 import { describe, skyGradient } from "./theme";
 import { getCached, getSaved, getWeather, saveLocation } from "./api";
-import { state, set } from "./state";
+import { state, set, subscribe } from "./state";
 import { renderHero } from "./ui/hero";
 import { renderHourly } from "./ui/hourly";
 import { renderDaily } from "./ui/daily";
+import { renderCards } from "./ui/cards";
+import { initSidebar } from "./ui/sidebar";
 
 const DEFAULT: Location = {
   name: "Berlin",
@@ -17,6 +21,7 @@ const DEFAULT: Location = {
 
 let skyFront = 0;
 let skyEls: HTMLDivElement[] = [];
+let currentMain: HTMLElement | null = null;
 
 function setupShell(): { main: HTMLElement } {
   const app = document.getElementById("app");
@@ -51,7 +56,6 @@ function applySky(bundle: WeatherBundle): void {
   if (front.style.backgroundImage === grad) return;
 
   back.style.backgroundImage = grad;
-  // force reflow so the transition triggers
   void back.offsetWidth;
   back.classList.add("active");
   front.classList.remove("active");
@@ -59,6 +63,7 @@ function applySky(bundle: WeatherBundle): void {
 }
 
 function renderMain(main: HTMLElement, b: WeatherBundle): void {
+  currentMain = main;
   main.replaceChildren(
     renderHero(b, state.settings),
     renderHourly(b, state.settings),
@@ -69,6 +74,7 @@ function renderMain(main: HTMLElement, b: WeatherBundle): void {
   const daily = renderDaily(b, state.settings);
   daily.classList.add("span-2", "row-2");
   grid.appendChild(daily);
+  for (const card of renderCards(b, state.settings)) grid.appendChild(card);
   main.appendChild(grid);
 }
 
@@ -91,9 +97,24 @@ function renderError(main: HTMLElement, retry: () => void): void {
   main.replaceChildren(box);
 }
 
-async function load(loc: Location, main: HTMLElement): Promise<void> {
+async function selectLocation(loc: Location): Promise<void> {
+  const main = currentMain ?? document.getElementById("main");
+  if (!main) return;
+
   set({ current: loc, loading: true, error: null });
-  if (!state.bundle) renderPlaceholder(main, "Loading weather\u2026");
+
+  try {
+    const cached = await getCached(loc);
+    if (cached) {
+      set({ bundle: cached });
+      applySky(cached);
+      renderMain(main, cached);
+    } else if (!state.bundle) {
+      renderPlaceholder(main, "Loading weather\u2026");
+    }
+  } catch {
+    /* no cache */
+  }
 
   try {
     const b = await getWeather(loc, false);
@@ -102,12 +123,17 @@ async function load(loc: Location, main: HTMLElement): Promise<void> {
     renderMain(main, b);
   } catch (err) {
     set({ loading: false, error: String(err) });
-    renderError(main, () => void load(loc, main));
+    renderError(main, () => void selectLocation(loc));
   }
 }
 
 async function init(): Promise<void> {
   const { main } = setupShell();
+  currentMain = main;
+
+  initSidebar(document.getElementById("sidebar")!, (loc) => {
+    void selectLocation(loc);
+  });
 
   let saved: Location[] = [];
   try {
@@ -125,7 +151,6 @@ async function init(): Promise<void> {
   set({ saved });
   const loc = saved[0] ?? DEFAULT;
 
-  // Show cached data instantly if present.
   try {
     const cached = await getCached(loc);
     if (cached) {
@@ -137,7 +162,16 @@ async function init(): Promise<void> {
     /* no cache */
   }
 
-  await load(loc, main);
+  set({ current: loc, loading: true, error: null });
+  try {
+    const b = await getWeather(loc, false);
+    set({ bundle: b, loading: false });
+    applySky(b);
+    renderMain(main, b);
+  } catch (err) {
+    set({ loading: false, error: String(err) });
+    renderError(main, () => void selectLocation(loc));
+  }
 
   const refresh = () => {
     const cur = state.current;
@@ -153,6 +187,14 @@ async function init(): Promise<void> {
       }
     })();
   };
+
+  // Re-render on unit changes without refetching.
+  subscribe((s) => {
+    if (s.bundle && s.settings) {
+      const m = currentMain;
+      if (m && m.querySelector("#grid")) renderMain(m, s.bundle);
+    }
+  });
 
   setInterval(refresh, 10 * 60 * 1000);
   document.addEventListener("visibilitychange", () => {

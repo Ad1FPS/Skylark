@@ -1,0 +1,285 @@
+import type { Location, Settings, WeatherBundle } from "../types";
+import { state, set, subscribe } from "../state";
+import { searchCity, saveLocation, removeLocation, getWeather, getCached } from "../api";
+import { esc, saveSettings, tempDeg } from "../format";
+import { describe } from "../theme";
+import { conditionIcon, icon } from "../icons";
+
+const cache = new Map<string, WeatherBundle>();
+const fetching = new Set<string>();
+
+function key(loc: Location): string {
+  return `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`;
+}
+
+function sameLoc(a: Location, b: Location | null): boolean {
+  if (!b) return false;
+  return a.latitude === b.latitude && a.longitude === b.longitude;
+}
+
+function secondary(loc: Location): string {
+  const parts = [loc.admin1, loc.country].filter((x): x is string => !!x);
+  return parts.join(", ");
+}
+
+export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void): void {
+  // Toggle button (mobile only).
+  const existingToggle = document.querySelector(".sidebar-toggle");
+  if (!existingToggle) {
+    const toggle = document.createElement("button");
+    toggle.className = "sidebar-toggle";
+    toggle.setAttribute("aria-label", "Toggle sidebar");
+    toggle.innerHTML = icon("menu", 20);
+    toggle.addEventListener("click", () => root.classList.toggle("open"));
+    document.body.appendChild(toggle);
+  }
+
+  // Backdrop for mobile.
+  let backdrop: HTMLButtonElement | null = null;
+  const ensureBackdrop = (): HTMLButtonElement => {
+    if (!backdrop) {
+      backdrop = document.createElement("button");
+      backdrop.className = "sidebar-backdrop";
+      backdrop.setAttribute("aria-label", "Close");
+      backdrop.addEventListener("click", () => root.classList.remove("open"));
+      document.body.appendChild(backdrop);
+    }
+    return backdrop;
+  };
+  ensureBackdrop();
+
+  root.replaceChildren();
+
+  // Search box (built once).
+  const searchWrap = document.createElement("div");
+  searchWrap.className = "side-search";
+  searchWrap.innerHTML = `
+    <span class="side-search-icon">${icon("search", 16)}</span>
+    <input type="search" class="side-search-input" placeholder="Search city" autocomplete="off" spellcheck="false"/>
+  `;
+  const input = searchWrap.querySelector("input") as HTMLInputElement;
+
+  const results = document.createElement("div");
+  results.className = "side-results";
+  results.hidden = true;
+
+  const list = document.createElement("div");
+  list.className = "side-list";
+
+  const settingsBox = document.createElement("div");
+  settingsBox.className = "side-settings";
+
+  root.append(searchWrap, results, list, settingsBox);
+
+  let reqId = 0;
+  let timer: number | undefined;
+
+  input.addEventListener("input", () => {
+    if (timer !== undefined) window.clearTimeout(timer);
+    const q = input.value.trim();
+    if (!q) {
+      results.hidden = true;
+      results.replaceChildren();
+      return;
+    }
+    timer = window.setTimeout(() => void runSearch(q), 250);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      input.value = "";
+      results.hidden = true;
+      results.replaceChildren();
+      input.blur();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!searchWrap.contains(e.target as Node) && !results.contains(e.target as Node)) {
+      results.hidden = true;
+    }
+  });
+
+  const runSearch = async (q: string): Promise<void> => {
+    const id = ++reqId;
+    try {
+      const found = await searchCity(q);
+      if (id !== reqId) return;
+      renderResults(found);
+    } catch {
+      if (id !== reqId) return;
+      renderResults([]);
+    }
+  };
+
+  const renderResults = (found: Location[]): void => {
+    results.replaceChildren();
+    results.hidden = false;
+    if (found.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "side-empty";
+      empty.textContent = "No matches";
+      results.appendChild(empty);
+      return;
+    }
+    for (const loc of found.slice(0, 8)) {
+      const item = document.createElement("button");
+      item.className = "side-result";
+      item.innerHTML = `
+        <span class="side-result-name">${esc(loc.name)}</span>
+        <span class="side-result-sub">${esc(secondary(loc))}</span>
+      `;
+      item.addEventListener("click", () => {
+        void (async () => {
+          try {
+            const updated = await saveLocation(loc);
+            set({ saved: updated });
+          } catch {
+            /* ignore */
+          }
+          input.value = "";
+          results.hidden = true;
+          results.replaceChildren();
+          input.blur();
+          onSelect(loc);
+        })();
+      });
+      results.appendChild(item);
+    }
+  };
+
+  // Prefetch temps for saved cities.
+  const ensureTemps = (saved: Location[]): void => {
+    for (const loc of saved) {
+      const k = key(loc);
+      if (cache.has(k) || fetching.has(k)) continue;
+      void (async () => {
+        fetching.add(k);
+        try {
+          const cached = await getCached(loc);
+          if (cached) {
+            cache.set(k, cached);
+            renderList();
+          }
+          const fresh = await getWeather(loc, false);
+          cache.set(k, fresh);
+          renderList();
+        } catch {
+          /* ignore */
+        } finally {
+          fetching.delete(k);
+        }
+      })();
+    }
+  };
+
+  const renderList = (): void => {
+    const saved = state.saved;
+    ensureTemps(saved);
+    list.replaceChildren();
+    if (saved.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "side-empty";
+      empty.textContent = "No saved cities";
+      list.appendChild(empty);
+      return;
+    }
+    for (const loc of saved) {
+      const active = sameLoc(loc, state.current);
+      const row = document.createElement("div");
+      row.className = `city${active ? " active" : ""}`;
+
+      const b = cache.get(key(loc));
+      const cond = b ? describe(b.current.weatherCode, b.current.isDay) : null;
+      const tempTxt = b ? tempDeg(b.current.temperature, state.settings) : "\u2013";
+
+      row.innerHTML = `
+        <button class="city-main" type="button">
+          <span class="city-icon">${cond ? conditionIcon(cond.kind, b!.current.isDay, 20) : ""}</span>
+          <span class="city-text">
+            <span class="city-name">${esc(loc.name)}</span>
+            <span class="city-sub">${esc(secondary(loc))}</span>
+          </span>
+          <span class="city-temp">${esc(tempTxt)}</span>
+        </button>
+        <button class="city-remove" type="button" aria-label="Remove">${icon("close", 12)}</button>
+      `;
+
+      const mainBtn = row.querySelector(".city-main") as HTMLButtonElement;
+      mainBtn.addEventListener("click", () => {
+        root.classList.remove("open");
+        onSelect(loc);
+      });
+
+      const removeBtn = row.querySelector(".city-remove") as HTMLButtonElement;
+      removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        void (async () => {
+          try {
+            const updated = await removeLocation(loc.latitude, loc.longitude);
+            set({ saved: updated });
+            if (sameLoc(loc, state.current) && updated.length > 0) {
+              onSelect(updated[0]);
+            }
+          } catch {
+            /* ignore */
+          }
+        })();
+      });
+
+      list.appendChild(row);
+    }
+  };
+
+  const renderSettings = (): void => {
+    const s = state.settings;
+    settingsBox.innerHTML = `<div class="side-section-title">SETTINGS</div>`;
+    settingsBox.appendChild(segmented([
+      { label: "\u00B0C", value: "c", active: s.temp === "c" },
+      { label: "\u00B0F", value: "f", active: s.temp === "f" },
+    ], (v) => update({ ...state.settings, temp: v as Settings["temp"] })));
+    settingsBox.appendChild(segmented([
+      { label: "km/h", value: "kmh", active: s.wind === "kmh" },
+      { label: "mph", value: "mph", active: s.wind === "mph" },
+      { label: "m/s", value: "ms", active: s.wind === "ms" },
+    ], (v) => update({ ...state.settings, wind: v as Settings["wind"] })));
+    settingsBox.appendChild(segmented([
+      { label: "24h", value: "24", active: s.clock === "24" },
+      { label: "12h", value: "12", active: s.clock === "12" },
+    ], (v) => update({ ...state.settings, clock: v as Settings["clock"] })));
+  };
+
+  interface Seg { label: string; value: string; active: boolean; }
+  const segmented = (items: Seg[], onPick: (v: string) => void): HTMLElement => {
+    const box = document.createElement("div");
+    box.className = "seg";
+    for (const it of items) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `seg-btn${it.active ? " active" : ""}`;
+      btn.textContent = it.label;
+      btn.addEventListener("click", () => onPick(it.value));
+      box.appendChild(btn);
+    }
+    return box;
+  };
+
+  let lastSettings = state.settings;
+  const update = (s: Settings): void => {
+    lastSettings = s;
+    set({ settings: s });
+    saveSettings(s);
+  };
+  void lastSettings;
+
+  subscribe((s) => {
+    if (s.saved !== undefined) renderList();
+    if (s.settings !== lastSettings) {
+      lastSettings = s.settings;
+      renderSettings();
+    }
+  });
+
+  renderList();
+  renderSettings();
+}
