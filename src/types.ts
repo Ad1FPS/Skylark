@@ -48,6 +48,12 @@ export interface Air {
   pm25: number;
 }
 
+/** One 15-minute step of the point precipitation forecast (mm in that step). */
+export interface Minute {
+  time: string;
+  precipitation: number;
+}
+
 export interface WeatherBundle {
   location: Location;
   fetchedAt: number;
@@ -55,6 +61,7 @@ export interface WeatherBundle {
   timezone: string;
   utcOffsetSeconds: number;
   current: Current;
+  minutely: Minute[];
   hourly: Hour[];
   daily: Day[];
   air: Air | null;
