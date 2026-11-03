@@ -1,0 +1,149 @@
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use tauri::{AppHandle, Manager, State};
+
+use crate::store;
+use crate::weather::{self, Location, WeatherBundle};
+
+const CACHE_TTL_SECS: i64 = 600;
+
+pub struct Http(pub reqwest::Client);
+
+impl Http {
+    pub fn new() -> Self {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .user_agent("weatherapp/0.1")
+            .build()
+            .unwrap_or_default();
+        Http(client)
+    }
+}
+
+impl Default for Http {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+fn now_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+fn cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path().app_cache_dir().map_err(|e| e.to_string())
+}
+
+fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path().app_data_dir().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn search_city(http: State<'_, Http>, query: String) -> Result<Vec<Location>, String> {
+    let query = query.trim().to_string();
+    if query.chars().count() < 2 {
+        return Ok(Vec::new());
+    }
+    weather::search(&http.0, &query).await
+}
+
+#[tauri::command]
+pub async fn get_cached(app: AppHandle, location: Location) -> Option<WeatherBundle> {
+    let dir = cache_dir(&app).ok()?;
+    store::read_cache(&dir, &location)
+}
+
+#[tauri::command]
+pub async fn get_weather(
+    app: AppHandle,
+    http: State<'_, Http>,
+    location: Location,
+    force: bool,
+) -> Result<WeatherBundle, String> {
+    let cached = get_cached(app.clone(), location.clone()).await;
+
+    if !force
+        && let Some(bundle) = &cached
+        && now_secs() - bundle.fetched_at < CACHE_TTL_SECS
+    {
+        return Ok(bundle.clone());
+    }
+
+    match weather::fetch_bundle(&http.0, &location).await {
+        Ok(bundle) => {
+            if let Ok(dir) = cache_dir(&app) {
+                store::write_cache(&dir, &bundle);
+            }
+            Ok(bundle)
+        }
+        Err(e) => match cached {
+            Some(mut bundle) => {
+                bundle.stale = true;
+                Ok(bundle)
+            }
+            None => Err(e),
+        },
+    }
+}
+
+#[tauri::command]
+pub fn get_saved(app: AppHandle) -> Vec<Location> {
+    data_dir(&app)
+        .map(|dir| store::read_saved(&dir))
+        .unwrap_or_default()
+}
+
+fn same_place(a: &Location, lat: f64, lon: f64) -> bool {
+    (a.latitude * 100.0).round() == (lat * 100.0).round()
+        && (a.longitude * 100.0).round() == (lon * 100.0).round()
+}
+
+#[tauri::command]
+pub fn save_location(app: AppHandle, location: Location) -> Result<Vec<Location>, String> {
+    let dir = data_dir(&app)?;
+    let mut list = store::read_saved(&dir);
+    if !list
+        .iter()
+        .any(|l| same_place(l, location.latitude, location.longitude))
+    {
+        list.push(location);
+        store::write_saved(&dir, &list)?;
+    }
+    Ok(list)
+}
+
+#[tauri::command]
+pub fn remove_location(
+    app: AppHandle,
+    latitude: f64,
+    longitude: f64,
+) -> Result<Vec<Location>, String> {
+    let dir = data_dir(&app)?;
+    let mut list = store::read_saved(&dir);
+    list.retain(|l| !same_place(l, latitude, longitude));
+    store::write_saved(&dir, &list)?;
+    Ok(list)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::same_place;
+    use crate::weather::Location;
+
+    #[test]
+    fn dedupes_on_rounded_coords() {
+        let loc = Location {
+            name: "London".into(),
+            country: "United Kingdom".into(),
+            admin1: None,
+            latitude: 51.50853,
+            longitude: -0.12574,
+        };
+        assert!(same_place(&loc, 51.5084, -0.1256));
+        assert!(!same_place(&loc, 51.52, -0.12574));
+    }
+}
