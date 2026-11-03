@@ -10,6 +10,7 @@ import { renderHourly } from "./ui/hourly";
 import { renderDaily } from "./ui/daily";
 import { renderCards } from "./ui/cards";
 import { initSidebar } from "./ui/sidebar";
+import { setAmbient } from "./ambient";
 
 const DEFAULT: Location = {
   name: "Berlin",
@@ -60,6 +61,7 @@ function applySky(bundle: WeatherBundle): void {
   back.classList.add("active");
   front.classList.remove("active");
   skyFront = 1 - skyFront;
+  setAmbient(cond.kind, c.isDay);
 }
 
 function renderMain(main: HTMLElement, b: WeatherBundle): void {

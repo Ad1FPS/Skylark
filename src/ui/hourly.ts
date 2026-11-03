@@ -36,7 +36,7 @@ export function renderHourly(b: WeatherBundle, s: Settings): HTMLElement {
       : `<div class="hour-rain"></div>`;
     col.innerHTML = `
       <div class="hour-label">${label}</div>
-      ${conditionIcon(cond.kind, h.isDay, 22)}
+      ${conditionIcon(cond.kind, h.isDay, 28)}
       <div class="hour-temp">${temp(h.temperature, s)}&deg;</div>
       ${rain}
     `;

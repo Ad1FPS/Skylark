@@ -232,7 +232,15 @@ function feelsCard(b: WeatherBundle, s: Settings): HTMLElement {
   return card;
 }
 
-function humidityCard(b: WeatherBundle): HTMLElement {
+/** Dew point in C via the Magnus formula. */
+function dewPoint(tempC: number, rh: number): number {
+  const a = 17.62;
+  const b = 243.12;
+  const g = Math.log(Math.max(rh, 1) / 100) + (a * tempC) / (b + tempC);
+  return (b * g) / (a - g);
+}
+
+function humidityCard(b: WeatherBundle, s: Settings): HTMLElement {
   const h = b.current.humidity;
   const card = makeCard("Humidity", "drop");
   const body = document.createElement("div");
@@ -240,7 +248,7 @@ function humidityCard(b: WeatherBundle): HTMLElement {
   body.innerHTML = `
     <div class="value">${h}%</div>
     <div class="bar-fill"><div style="width:${Math.max(0, Math.min(100, h))}%"></div></div>
-    <div class="sub">Dew point unavailable</div>
+    <div class="sub">The dew point is ${tempDeg(dewPoint(b.current.temperature, h), s)} right now.</div>
   `;
   card.appendChild(body);
   return card;
@@ -269,16 +277,17 @@ function pressureCard(b: WeatherBundle): HTMLElement {
   const card = makeCard("Pressure", "gauge");
   const body = document.createElement("div");
   body.className = "info-body";
+  // Half-circle gauge, centre (80,78) radius 70, 950 hPa at the left end and 1050 at the right.
   const t = Math.max(0, Math.min(1, (p - 950) / 100));
-  const w = 160;
-  const h = 54;
-  const cx = w * t;
-  const cy = h - Math.sin(Math.PI * t) * (h - 10);
+  const px = (80 - 70 * Math.cos(Math.PI * t)).toFixed(1);
+  const py = (78 - 70 * Math.sin(Math.PI * t)).toFixed(1);
+  const arc = (x: string, y: string) => `M10 78 A 70 70 0 0 1 ${x} ${y}`;
   body.innerHTML = `
     <div class="value">${p}<span class="unit">hPa</span></div>
-    <svg class="gauge-arc" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" aria-hidden="true">
-      <path d="M4 ${h - 2} A ${(w - 8) / 2} ${(w - 8) / 2} 0 0 1 ${w - 4} ${h - 2}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#fff"/>
+    <svg class="gauge-arc" viewBox="0 0 160 86" width="100%" height="72" aria-hidden="true">
+      <path d="${arc("150", "78")}" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="5" stroke-linecap="round"/>
+      <path d="${arc(px, py)}" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="${px}" cy="${py}" r="6" fill="#fff"/>
     </svg>
     <div class="gauge-labels"><span>Low</span><span>High</span></div>
   `;
@@ -294,7 +303,7 @@ export function renderCards(b: WeatherBundle, s: Settings): HTMLElement[] {
   out.push(windCard(b, s));
   out.push(precipCard(b));
   out.push(feelsCard(b, s));
-  out.push(humidityCard(b));
+  out.push(humidityCard(b, s));
   out.push(visibilityCard(b));
   out.push(pressureCard(b));
   return out;

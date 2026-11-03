@@ -1,6 +1,6 @@
 import type { Settings, WeatherBundle } from "../types";
 import { describe, skyGradient } from "../theme";
-import { clock, esc, hourLabel, temp, tempDeg } from "../format";
+import { esc, hourLabel, temp, tempDeg } from "../format";
 import { conditionIcon } from "../icons";
 
 export function renderHero(b: WeatherBundle, s: Settings): HTMLElement {
@@ -29,18 +29,10 @@ export function renderHero(b: WeatherBundle, s: Settings): HTMLElement {
   wrap.innerHTML = `
     <div class="hero-city">${location}${sub ? `<small>${sub}</small>` : ""}</div>
     <div class="hero-temp">${temp(c.temperature, s)}<sup>&deg;</sup></div>
-    <div class="hero-cond">${conditionIcon(cond.kind, c.isDay, 20)} ${esc(cond.label)}</div>
+    <div class="hero-cond">${conditionIcon(cond.kind, c.isDay, 30)} ${esc(cond.label)}</div>
     <div class="hero-hl">${hl}</div>
     <div class="hero-summary">${esc(summary)}</div>
     ${stale}
   `;
-  // ensure the icon doesn't break the flow (keep it inline)
-  const condEl = wrap.querySelector(".hero-cond");
-  if (condEl) condEl.innerHTML = condEl.innerHTML;
   return wrap;
-}
-
-/** Exposed for potential callers that need the local time string. */
-export function localClock(iso: string, s: Settings): string {
-  return clock(iso, s);
 }

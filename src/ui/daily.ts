@@ -35,7 +35,7 @@ export function renderDaily(b: WeatherBundle, s: Settings): HTMLElement {
 
     row.innerHTML = `
       <div class="daily-day">${dayName(d.date, i)}</div>
-      <div>${conditionIcon(cond.kind, true, 22)}</div>
+      <div>${conditionIcon(cond.kind, true, 26)}</div>
       ${rain}
       <div class="daily-min">${temp(d.tempMin, s)}&deg;</div>
       <div class="daily-bar"><div class="daily-bar-fill" style="${fill}"></div></div>

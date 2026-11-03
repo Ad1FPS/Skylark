@@ -1,1012 +1,305 @@
-=== FILE: src/ui/cards.ts ===
-import type { Settings, WeatherBundle } from "../types";
-import { compass, esc, tempDeg, tempColor, clock } from "../format";
-import { icon } from "../icons";
+=== FILE: src/ambient.ts ===
+import "./styles/ambient.css";
+import type { Kind } from "./theme";
 
-const AQI_STOPS: Array<[number, string]> = [
-  [0, "#4ade80"],
-  [50, "#facc15"],
-  [100, "#fb923c"],
-  [150, "#ef4444"],
-  [200, "#a855f7"],
-  [300, "#a855f7"],
-];
+let root: HTMLDivElement | null = null;
+let lastKey = "";
 
-const UV_STOPS: Array<[number, string]> = [
-  [0, "#4ade80"],
-  [2, "#4ade80"],
-  [3, "#facc15"],
-  [5, "#facc15"],
-  [6, "#fb923c"],
-  [7, "#fb923c"],
-  [8, "#ef4444"],
-  [10, "#ef4444"],
-  [11, "#a855f7"],
-];
-
-function rampGradient(stops: Array<[number, string]>, max: number): string {
-  const parts = stops.map(([v, c]) => `${c} ${Math.round((v / max) * 100)}%`);
-  return `linear-gradient(90deg, ${parts.join(", ")})`;
+/** Deterministic 0..1 generator (mulberry32) so positions never churn between renders. */
+function rng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function makeCard(title: string, iconName: Parameters<typeof icon>[0], extra = ""): HTMLElement {
-  const card = document.createElement("section");
-  card.className = `card info${extra ? " " + extra : ""}`;
-  const h = document.createElement("h2");
-  h.className = "card-title";
-  h.innerHTML = `${icon(iconName, 13)}<span>${esc(title)}</span>`;
-  card.appendChild(h);
-  return card;
+function stars(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "amb-stars";
+  const rand = rng(1337);
+  const group = (cls: string, n: number): string => {
+    const shadows: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const x = (rand() * 100).toFixed(2);
+      const y = (rand() * 70).toFixed(2);
+      shadows.push(`${x}vw ${y}vh 0 0 rgba(255,255,255,${(0.4 + rand() * 0.4).toFixed(2)})`);
+    }
+    const g = document.createElement("div");
+    g.className = cls;
+    g.style.boxShadow = shadows.join(", ");
+    el.appendChild(g);
+    return cls;
+  };
+  group("amb-stars-a", 20);
+  group("amb-stars-b", 20);
+  return el;
 }
 
-function aqiCategory(aqi: number): string {
-  if (aqi <= 50) return "Good";
-  if (aqi <= 100) return "Moderate";
-  if (aqi <= 150) return "Unhealthy for sensitive";
-  if (aqi <= 200) return "Unhealthy";
-  if (aqi <= 300) return "Very unhealthy";
-  return "Hazardous";
+function clouds(count: number): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "amb-clouds";
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement("div");
+    c.className = "amb-cloud";
+    c.style.top = `${5 + i * (80 / count) + (i % 2 ? 4 : 0)}%`;
+    c.style.animationDuration = `${90 + i * 18}s`;
+    c.style.animationDelay = `${-i * 7}s`;
+    el.appendChild(c);
+  }
+  return el;
 }
 
-function aqiSentence(aqi: number): string {
-  if (aqi <= 50) return "Air quality is satisfactory today.";
-  if (aqi <= 100) return "Air quality is acceptable; sensitive people should take care.";
-  if (aqi <= 150) return "Sensitive groups may feel effects from the air.";
-  if (aqi <= 200) return "Everyone may begin to feel effects from the air.";
-  if (aqi <= 300) return "Health alert: air is very unhealthy.";
-  return "Health warning: hazardous air.";
+function bands(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "amb-fog";
+  for (let i = 0; i < 3; i++) {
+    const b = document.createElement("div");
+    b.className = i % 2 ? "amb-band alt" : "amb-band";
+    b.style.top = `${18 + i * 26}%`;
+    b.style.animationDuration = `${70 + i * 25}s`;
+    el.appendChild(b);
+  }
+  return el;
 }
 
-function uvCategory(uv: number): string {
-  if (uv <= 2) return "Low";
-  if (uv <= 5) return "Moderate";
-  if (uv <= 7) return "High";
-  if (uv <= 10) return "Very high";
-  return "Extreme";
+function rain(kind: Kind): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = kind === "storm" ? "amb-rain storm" : `amb-rain ${kind}`;
+  for (let i = 0; i < 2; i++) {
+    const layer = document.createElement("div");
+    layer.className = i ? "amb-rain-layer far" : "amb-rain-layer";
+    el.appendChild(layer);
+  }
+  return el;
 }
 
-function rampBar(gradient: string, pos: number): string {
-  const pct = Math.max(0, Math.min(100, pos * 100));
-  return `<div class="ramp"><div class="ramp-fill" style="background:${gradient}"></div><div class="ramp-dot" style="left:${pct}%"></div></div>`;
+function snow(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "amb-snow";
+  for (let i = 0; i < 2; i++) {
+    const layer = document.createElement("div");
+    layer.className = i ? "amb-snow-layer big" : "amb-snow-layer";
+    el.appendChild(layer);
+  }
+  return el;
 }
 
-function airCard(b: WeatherBundle): HTMLElement {
-  const aqi = b.air!.usAqi;
-  const card = makeCard("Air Quality", "leaf", "span-2");
-  const body = document.createElement("div");
-  body.className = "info-body";
-  body.innerHTML = `
-    <div class="value">${aqi}</div>
-    <div class="sub">${esc(aqiCategory(aqi))}</div>
-    <div class="sentence">${esc(aqiSentence(aqi))}</div>
-    ${rampBar(rampGradient(AQI_STOPS, 300), Math.min(aqi, 300) / 300)}
-  `;
-  card.appendChild(body);
-  return card;
+function build(kind: Kind, isDay: boolean): HTMLDivElement {
+  const wrap = document.createElement("div");
+  wrap.className = `amb-layer amb-${kind}${isDay ? " day" : " night"}`;
+  switch (kind) {
+    case "clear":
+      wrap.appendChild(isDay ? Object.assign(document.createElement("div"), { className: "amb-glow" }) : stars());
+      break;
+    case "partly":
+      wrap.appendChild(clouds(3));
+      break;
+    case "cloudy":
+      wrap.appendChild(clouds(5));
+      break;
+    case "fog":
+      wrap.appendChild(bands());
+      break;
+    case "drizzle":
+    case "rain":
+      wrap.appendChild(rain(kind));
+      break;
+    case "snow":
+      wrap.appendChild(snow());
+      break;
+    case "storm":
+      wrap.appendChild(rain(kind));
+      wrap.appendChild(Object.assign(document.createElement("div"), { className: "amb-flash" }));
+      break;
+  }
+  return wrap;
 }
 
-function uvCard(b: WeatherBundle): HTMLElement {
-  const uv = Math.round(b.current.uvIndex);
-  const peak = Math.round(b.daily[0]?.uvIndexMax ?? uv);
-  const card = makeCard("UV Index", "uv");
-  const body = document.createElement("div");
-  body.className = "info-body";
-  body.innerHTML = `
-    <div class="value">${uv}</div>
-    <div class="sub">${esc(uvCategory(uv))}</div>
-    <div class="sentence">Peak today: ${peak}</div>
-    ${rampBar(rampGradient(UV_STOPS, 11), Math.min(uv, 11) / 11)}
-  `;
-  card.appendChild(body);
-  return card;
-}
+export function setAmbient(kind: Kind, isDay: boolean): void {
+  const key = `${kind}-${isDay}`;
+  if (root && key === lastKey) return;
+  lastKey = key;
 
-function timeParts(iso: string): number {
-  const t = iso.length > 10 ? iso.slice(11, 16) : "00:00";
-  const [h, m] = t.split(":").map((x) => parseInt(x, 10));
-  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
-}
-
-function sunCard(b: WeatherBundle, s: Settings): HTMLElement {
-  const day = b.daily[0];
-  const card = makeCard("Sun", "sun");
-  const body = document.createElement("div");
-  body.className = "info-body";
-  const rise = day ? timeParts(day.sunrise) : 0;
-  const set = day ? timeParts(day.sunset) : 0;
-  const now = timeParts(b.current.time);
-  let t = (now - rise) / (set - rise || 1);
-  const dimmed = t < 0 || t > 1;
-  t = Math.max(0, Math.min(1, t));
-
-  const w = 180;
-  const h = 60;
-  const cx = w * t;
-  const cy = h - Math.sin(Math.PI * t) * (h - 8);
-  const dot = dimmed ? `style="opacity:.4"` : "";
-
-  body.innerHTML = `
-    <div class="sun-times">
-      <span>${icon("sunrise", 14)} ${esc(day ? clock(day.sunrise, s) : "--")}</span>
-      <span>${icon("sunset", 14)} ${esc(day ? clock(day.sunset, s) : "--")}</span>
-    </div>
-    <svg class="sun-arc" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" aria-hidden="true">
-      <path d="M0 ${h - 1} Q ${w / 2} ${-h + 12} ${w} ${h - 1}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5" stroke-dasharray="4 4"/>
-      <line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
-      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5" fill="#fff" ${dot}/>
-    </svg>
-  `;
-  card.appendChild(body);
-  return card;
-}
-
-function windCard(b: WeatherBundle, s: Settings): HTMLElement {
-  const card = makeCard("Wind", "wind");
-  const body = document.createElement("div");
-  body.className = "info-body wind";
-  const dir = b.current.windDirection;
-  const deg = ((dir % 360) + 360) % 360;
-  const speed = b.current.windSpeed;
-  const wv = unitOf(s);
-  const converted = Math.round(wv.conv(speed));
-
-  const cx = 60;
-  const cy = 60;
-  let ticks = "";
-  for (let i = 0; i < 12; i++) {
-    const a = (i * 30 * Math.PI) / 180;
-    const inner = i % 3 === 0 ? 48 : 52;
-    const x1 = cx + Math.sin(a) * inner;
-    const y1 = cy - Math.cos(a) * inner;
-    const x2 = cx + Math.sin(a) * 56;
-    const y2 = cy - Math.cos(a) * 56;
-    ticks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="rgba(255,255,255,.4)" stroke-width="${i % 3 === 0 ? 1.6 : 1}"/>`;
+  if (!root) {
+    root = document.createElement("div");
+    root.className = "ambient";
+    root.setAttribute("aria-hidden", "true");
+    const sky = document.querySelector(".sky");
+    if (sky?.parentNode === document.body) sky.after(root);
+    else document.body.appendChild(root);
+    if (document.visibilityState === "hidden") root.classList.add("paused");
+    document.addEventListener("visibilitychange", () => {
+      root?.classList.toggle("paused", document.visibilityState === "hidden");
+    });
   }
 
-  const letters = [
-    { t: "N", x: cx, y: 12 },
-    { t: "E", x: 112, y: cy + 4 },
-    { t: "S", x: cx, y: 116 },
-    { t: "W", x: 8, y: cy + 4 },
-  ]
-    .map((l) => `<text x="${l.x}" y="${l.y}" font-size="10" fill="rgba(255,255,255,.7)" text-anchor="middle" font-family="inherit">${l.t}</text>`)
-    .join("");
-
-  body.innerHTML = `
-    <div class="wind-compass">
-      <svg viewBox="0 0 120 120" width="120" height="120" aria-hidden="true">
-        <circle cx="${cx}" cy="${cy}" r="58" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
-        ${ticks}
-        ${letters}
-        <g transform="rotate(${deg} 60 60)">
-          <path d="M60 30 L66 46 L60 42 L54 46 Z" fill="#fff"/>
-          <line x1="60" y1="42" x2="60" y2="64" stroke="rgba(255,255,255,.55)" stroke-width="1.6"/>
-        </g>
-        <circle cx="${cx}" cy="${cy}" r="2" fill="#fff"/>
-      </svg>
-    </div>
-    <div class="value">${converted}<span class="unit">${esc(wv.unit)}</span></div>
-    <div class="sub">${esc(compass(deg))}</div>
-  `;
-  card.appendChild(body);
-  return card;
-}
-
-function unitOf(s: Settings): { unit: string; conv: (kmh: number) => number } {
-  if (s.wind === "mph") return { unit: "mph", conv: (k) => k * 0.621371 };
-  if (s.wind === "ms") return { unit: "m/s", conv: (k) => k / 3.6 };
-  return { unit: "km/h", conv: (k) => k };
-}
-
-function precipCard(b: WeatherBundle): HTMLElement {
-  const card = makeCard("Precipitation", "drop");
-  const body = document.createElement("div");
-  body.className = "info-body";
-  let max = 0;
-  for (const h of b.hourly) {
-    const p = h.precipitationProbability;
-    if (p != null && p > max) max = p;
-  }
-  body.innerHTML = `
-    <div class="value">${b.current.precipitation.toFixed(1)}<span class="unit">mm</span></div>
-    <div class="sub">now</div>
-    <div class="sentence">Up to ${max}% chance in the next 24 h</div>
-  `;
-  card.appendChild(body);
-  return card;
-}
-
-function feelsCard(b: WeatherBundle, s: Settings): HTMLElement {
-  const card = makeCard("Feels Like", "thermo");
-  const body = document.createElement("div");
-  body.className = "info-body";
-  const diff = b.current.apparent - b.current.temperature;
-  let sentence: string;
-  if (diff < -1) sentence = "Wind is making it feel cooler.";
-  else if (diff > 1) sentence = "Feels warmer than the actual temperature.";
-  else sentence = "Similar to the actual temperature.";
-  body.innerHTML = `
-    <div class="value">${esc(tempDeg(b.current.apparent, s))}</div>
-    <div class="sentence">${esc(sentence)}</div>
-  `;
-  card.appendChild(body);
-  return card;
-}
-
-function humidityCard(b: WeatherBundle): HTMLElement {
-  const h = b.current.humidity;
-  const card = makeCard("Humidity", "drop");
-  const body = document.createElement("div");
-  body.className = "info-body";
-  body.innerHTML = `
-    <div class="value">${h}%</div>
-    <div class="bar-fill"><div style="width:${Math.max(0, Math.min(100, h))}%"></div></div>
-    <div class="sub">Dew point unavailable</div>
-  `;
-  card.appendChild(body);
-  return card;
-}
-
-function visibilityCard(b: WeatherBundle): HTMLElement {
-  const km = b.current.visibility / 1000;
-  const txt = km >= 10 ? String(Math.round(km)) : km.toFixed(1);
-  let sentence: string;
-  if (km >= 10) sentence = "Clear view.";
-  else if (km >= 2) sentence = "Reduced visibility.";
-  else sentence = "Poor visibility.";
-  const card = makeCard("Visibility", "eye");
-  const body = document.createElement("div");
-  body.className = "info-body";
-  body.innerHTML = `
-    <div class="value">${esc(txt)}<span class="unit">km</span></div>
-    <div class="sentence">${esc(sentence)}</div>
-  `;
-  card.appendChild(body);
-  return card;
-}
-
-function pressureCard(b: WeatherBundle): HTMLElement {
-  const p = Math.round(b.current.pressure);
-  const card = makeCard("Pressure", "gauge");
-  const body = document.createElement("div");
-  body.className = "info-body";
-  const t = Math.max(0, Math.min(1, (p - 950) / 100));
-  const w = 160;
-  const h = 54;
-  const cx = w * t;
-  const cy = h - Math.sin(Math.PI * t) * (h - 10);
-  body.innerHTML = `
-    <div class="value">${p}<span class="unit">hPa</span></div>
-    <svg class="gauge-arc" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" aria-hidden="true">
-      <path d="M4 ${h - 2} A ${(w - 8) / 2} ${(w - 8) / 2} 0 0 1 ${w - 4} ${h - 2}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="#fff"/>
-    </svg>
-    <div class="gauge-labels"><span>Low</span><span>High</span></div>
-  `;
-  card.appendChild(body);
-  return card;
-}
-
-export function renderCards(b: WeatherBundle, s: Settings): HTMLElement[] {
-  const out: HTMLElement[] = [];
-  if (b.air) out.push(airCard(b));
-  out.push(uvCard(b));
-  out.push(sunCard(b, s));
-  out.push(windCard(b, s));
-  out.push(precipCard(b));
-  out.push(feelsCard(b, s));
-  out.push(humidityCard(b));
-  out.push(visibilityCard(b));
-  out.push(pressureCard(b));
-  return out;
-}
-
-// Keep tempColor referenced for future ramps without unused-import failures.
-void tempColor;
-=== END ===
-
-=== FILE: src/ui/sidebar.ts ===
-import type { Location, Settings, WeatherBundle } from "../types";
-import { state, set, subscribe } from "../state";
-import { searchCity, saveLocation, removeLocation, getWeather, getCached } from "../api";
-import { esc, saveSettings, tempDeg } from "../format";
-import { describe } from "../theme";
-import { conditionIcon, icon } from "../icons";
-
-const cache = new Map<string, WeatherBundle>();
-const fetching = new Set<string>();
-
-function key(loc: Location): string {
-  return `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`;
-}
-
-function sameLoc(a: Location, b: Location | null): boolean {
-  if (!b) return false;
-  return a.latitude === b.latitude && a.longitude === b.longitude;
-}
-
-function secondary(loc: Location): string {
-  const parts = [loc.admin1, loc.country].filter((x): x is string => !!x);
-  return parts.join(", ");
-}
-
-export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void): void {
-  // Toggle button (mobile only).
-  const existingToggle = document.querySelector(".sidebar-toggle");
-  if (!existingToggle) {
-    const toggle = document.createElement("button");
-    toggle.className = "sidebar-toggle";
-    toggle.setAttribute("aria-label", "Toggle sidebar");
-    toggle.innerHTML = icon("menu", 20);
-    toggle.addEventListener("click", () => root.classList.toggle("open"));
-    document.body.appendChild(toggle);
-  }
-
-  // Backdrop for mobile.
-  let backdrop: HTMLButtonElement | null = null;
-  const ensureBackdrop = (): HTMLButtonElement => {
-    if (!backdrop) {
-      backdrop = document.createElement("button");
-      backdrop.className = "sidebar-backdrop";
-      backdrop.setAttribute("aria-label", "Close");
-      backdrop.addEventListener("click", () => root.classList.remove("open"));
-      document.body.appendChild(backdrop);
-    }
-    return backdrop;
-  };
-  ensureBackdrop();
-
-  root.replaceChildren();
-
-  // Search box (built once).
-  const searchWrap = document.createElement("div");
-  searchWrap.className = "side-search";
-  searchWrap.innerHTML = `
-    <span class="side-search-icon">${icon("search", 16)}</span>
-    <input type="search" class="side-search-input" placeholder="Search city" autocomplete="off" spellcheck="false"/>
-  `;
-  const input = searchWrap.querySelector("input") as HTMLInputElement;
-
-  const results = document.createElement("div");
-  results.className = "side-results";
-  results.hidden = true;
-
-  const list = document.createElement("div");
-  list.className = "side-list";
-
-  const settingsBox = document.createElement("div");
-  settingsBox.className = "side-settings";
-
-  root.append(searchWrap, results, list, settingsBox);
-
-  let reqId = 0;
-  let timer: number | undefined;
-
-  input.addEventListener("input", () => {
-    if (timer !== undefined) window.clearTimeout(timer);
-    const q = input.value.trim();
-    if (!q) {
-      results.hidden = true;
-      results.replaceChildren();
-      return;
-    }
-    timer = window.setTimeout(() => void runSearch(q), 250);
-  });
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      input.value = "";
-      results.hidden = true;
-      results.replaceChildren();
-      input.blur();
-    }
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!searchWrap.contains(e.target as Node) && !results.contains(e.target as Node)) {
-      results.hidden = true;
-    }
-  });
-
-  const runSearch = async (q: string): Promise<void> => {
-    const id = ++reqId;
-    try {
-      const found = await searchCity(q);
-      if (id !== reqId) return;
-      renderResults(found);
-    } catch {
-      if (id !== reqId) return;
-      renderResults([]);
-    }
-  };
-
-  const renderResults = (found: Location[]): void => {
-    results.replaceChildren();
-    results.hidden = false;
-    if (found.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "side-empty";
-      empty.textContent = "No matches";
-      results.appendChild(empty);
-      return;
-    }
-    for (const loc of found.slice(0, 8)) {
-      const item = document.createElement("button");
-      item.className = "side-result";
-      item.innerHTML = `
-        <span class="side-result-name">${esc(loc.name)}</span>
-        <span class="side-result-sub">${esc(secondary(loc))}</span>
-      `;
-      item.addEventListener("click", () => {
-        void (async () => {
-          try {
-            const updated = await saveLocation(loc);
-            set({ saved: updated });
-          } catch {
-            /* ignore */
-          }
-          input.value = "";
-          results.hidden = true;
-          results.replaceChildren();
-          input.blur();
-          onSelect(loc);
-        })();
-      });
-      results.appendChild(item);
-    }
-  };
-
-  // Prefetch temps for saved cities.
-  const ensureTemps = (saved: Location[]): void => {
-    for (const loc of saved) {
-      const k = key(loc);
-      if (cache.has(k) || fetching.has(k)) continue;
-      void (async () => {
-        fetching.add(k);
-        try {
-          const cached = await getCached(loc);
-          if (cached) {
-            cache.set(k, cached);
-            renderList();
-          }
-          const fresh = await getWeather(loc, false);
-          cache.set(k, fresh);
-          renderList();
-        } catch {
-          /* ignore */
-        } finally {
-          fetching.delete(k);
-        }
-      })();
-    }
-  };
-
-  const renderList = (): void => {
-    const saved = state.saved;
-    ensureTemps(saved);
-    list.replaceChildren();
-    if (saved.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "side-empty";
-      empty.textContent = "No saved cities";
-      list.appendChild(empty);
-      return;
-    }
-    for (const loc of saved) {
-      const active = sameLoc(loc, state.current);
-      const row = document.createElement("div");
-      row.className = `city${active ? " active" : ""}`;
-
-      const b = cache.get(key(loc));
-      const cond = b ? describe(b.current.weatherCode, b.current.isDay) : null;
-      const tempTxt = b ? tempDeg(b.current.temperature, state.settings) : "\u2013";
-
-      row.innerHTML = `
-        <button class="city-main" type="button">
-          <span class="city-icon">${cond ? conditionIcon(cond.kind, b!.current.isDay, 20) : ""}</span>
-          <span class="city-text">
-            <span class="city-name">${esc(loc.name)}</span>
-            <span class="city-sub">${esc(secondary(loc))}</span>
-          </span>
-          <span class="city-temp">${esc(tempTxt)}</span>
-        </button>
-        <button class="city-remove" type="button" aria-label="Remove">${icon("close", 12)}</button>
-      `;
-
-      const mainBtn = row.querySelector(".city-main") as HTMLButtonElement;
-      mainBtn.addEventListener("click", () => {
-        root.classList.remove("open");
-        onSelect(loc);
-      });
-
-      const removeBtn = row.querySelector(".city-remove") as HTMLButtonElement;
-      removeBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        void (async () => {
-          try {
-            const updated = await removeLocation(loc.latitude, loc.longitude);
-            set({ saved: updated });
-            if (sameLoc(loc, state.current) && updated.length > 0) {
-              onSelect(updated[0]);
-            }
-          } catch {
-            /* ignore */
-          }
-        })();
-      });
-
-      list.appendChild(row);
-    }
-  };
-
-  const renderSettings = (): void => {
-    const s = state.settings;
-    settingsBox.innerHTML = `<div class="side-section-title">SETTINGS</div>`;
-    settingsBox.appendChild(segmented([
-      { label: "\u00B0C", value: "c", active: s.temp === "c" },
-      { label: "\u00B0F", value: "f", active: s.temp === "f" },
-    ], (v) => update({ ...state.settings, temp: v as Settings["temp"] })));
-    settingsBox.appendChild(segmented([
-      { label: "km/h", value: "kmh", active: s.wind === "kmh" },
-      { label: "mph", value: "mph", active: s.wind === "mph" },
-      { label: "m/s", value: "ms", active: s.wind === "ms" },
-    ], (v) => update({ ...state.settings, wind: v as Settings["wind"] })));
-    settingsBox.appendChild(segmented([
-      { label: "24h", value: "24", active: s.clock === "24" },
-      { label: "12h", value: "12", active: s.clock === "12" },
-    ], (v) => update({ ...state.settings, clock: v as Settings["clock"] })));
-  };
-
-  interface Seg { label: string; value: string; active: boolean; }
-  const segmented = (items: Seg[], onPick: (v: string) => void): HTMLElement => {
-    const box = document.createElement("div");
-    box.className = "seg";
-    for (const it of items) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = `seg-btn${it.active ? " active" : ""}`;
-      btn.textContent = it.label;
-      btn.addEventListener("click", () => onPick(it.value));
-      box.appendChild(btn);
-    }
-    return box;
-  };
-
-  let lastSettings = state.settings;
-  const update = (s: Settings): void => {
-    lastSettings = s;
-    set({ settings: s });
-    saveSettings(s);
-  };
-  void lastSettings;
-
-  subscribe((s) => {
-    if (s.saved !== undefined) renderList();
-    if (s.settings !== lastSettings) {
-      lastSettings = s.settings;
-      renderSettings();
-    }
-  });
-
-  renderList();
-  renderSettings();
+  const next = build(kind, isDay);
+  const old = root.lastElementChild;
+  root.appendChild(next);
+  if (!old) return;
+  old.classList.add("out");
+  const done = () => old.remove();
+  old.addEventListener("transitionend", done, { once: true });
+  window.setTimeout(done, 700);
 }
 === END ===
 
-=== FILE: src/styles/cards.css ===
-.info {
-  min-height: 150px;
-  display: flex;
-  flex-direction: column;
+=== FILE: src/styles/ambient.css ===
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
 }
-
-.info .card-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.info-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.info .value {
-  font-family: var(--font-display);
-  font-size: 32px;
-  font-weight: 300;
-  line-height: 1.1;
-}
-
-.info .value .unit {
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--text-2);
-  margin-left: 3px;
-}
-
-.info .sub {
-  font-size: 13px;
-  color: var(--text-2);
-}
-
-.info .sentence {
-  font-size: 13px;
-  color: var(--text-2);
-}
-
-.ramp {
-  position: relative;
-  height: 6px;
-  border-radius: 6px;
-  margin-top: 8px;
-  overflow: visible;
-}
-
-.ramp-fill {
+.amb-layer {
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  opacity: 1;
+  transition: opacity 600ms var(--ease);
 }
-
-.ramp-dot {
-  position: absolute;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  transform: translate(-50%, -50%);
-}
-
-/* Sun */
-.sun-times {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: var(--text-2);
-}
-
-.sun-times svg {
-  vertical-align: -2px;
-}
-
-.sun-arc {
-  margin-top: 4px;
-  display: block;
-}
-
-/* Wind */
-.wind {
-  align-items: center;
-  text-align: center;
-}
-
-.wind-compass {
-  display: flex;
-  justify-content: center;
-}
-
-/* Humidity */
-.bar-fill {
-  height: 6px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.16);
-  overflow: hidden;
-  margin-top: 8px;
-}
-
-.bar-fill > div {
-  height: 100%;
-  background: #7cc4ff;
-  border-radius: 6px;
-}
-
-/* Pressure */
-.gauge-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--text-3);
-  margin-top: 2px;
-}
-=== END ===
-
-=== FILE: src/styles/sidebar.css ===
-.sidebar {
-  width: 232px;
-  height: 100vh;
-  background: var(--glass-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-right: 1px solid var(--glass-border);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-y: auto;
-  z-index: 20;
-}
-
-.side-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.side-search-icon {
-  position: absolute;
-  left: 10px;
-  color: var(--text-3);
-  display: flex;
-  pointer-events: none;
-}
-
-.side-search-input {
-  width: 100%;
-  font: inherit;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  padding: 7px 10px 7px 32px;
-  outline: none;
-}
-
-.side-search-input::placeholder {
-  color: var(--text-3);
-}
-
-.side-search-input:focus {
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.side-search-input::-webkit-search-cancel-button {
-  filter: invert(1);
-}
-
-.side-results {
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.side-result {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  width: 100%;
-  font: inherit;
-  color: var(--text);
-  text-align: left;
-  background: transparent;
-  border: 0;
-  padding: 7px 10px;
-  cursor: pointer;
-}
-
-.side-result:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.side-result-name {
-  font-size: 13px;
-}
-
-.side-result-sub {
-  font-size: 11px;
-  color: var(--text-3);
-}
-
-.side-empty {
-  padding: 10px;
-  font-size: 12px;
-  color: var(--text-3);
-}
-
-.side-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.city {
-  position: relative;
-  height: 56px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: stretch;
-}
-
-.city:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.city.active {
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.city-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  height: 100%;
-  font: inherit;
-  color: var(--text);
-  text-align: left;
-  background: transparent;
-  border: 0;
-  padding: 0 10px;
-  cursor: pointer;
-  min-width: 0;
-}
-
-.city-icon {
-  display: flex;
-  color: var(--text-2);
-  flex: 0 0 auto;
-}
-
-.city-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-
-.city-name {
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.city-sub {
-  font-size: 11px;
-  color: var(--text-3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.city-temp {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 300;
-  flex: 0 0 auto;
-}
-
-.city-remove {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-2);
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  cursor: pointer;
+.amb-layer.out {
   opacity: 0;
 }
-
-.city:hover .city-remove,
-.city-remove:focus {
-  opacity: 1;
+.ambient.paused * {
+  animation-play-state: paused !important;
 }
 
-.city-remove:hover {
-  background: rgba(255, 255, 255, 0.18);
+/* clear day: warm corner glow */
+.amb-glow {
+  position: absolute;
+  inset: -20% -20% 30% 30%;
+  background: radial-gradient(circle at 80% 20%, rgba(255, 236, 200, 0.5), transparent 60%);
+  will-change: opacity;
+  animation: amb-pulse 8s ease-in-out infinite;
+}
+@keyframes amb-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
-.side-settings {
-  margin-top: auto;
-  padding-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* clear night: stars */
+.amb-stars-a, .amb-stars-b {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  will-change: opacity;
+}
+.amb-stars-a { animation: amb-twinkle 5s ease-in-out infinite; }
+.amb-stars-b { animation: amb-twinkle 4s ease-in-out infinite reverse; }
+@keyframes amb-twinkle {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
-.side-section-title {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--text-3);
-  margin-bottom: 2px;
+/* clouds */
+.amb-cloud {
+  position: absolute;
+  left: -30vw;
+  width: 50vw;
+  height: 16vh;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  filter: blur(30px);
+  will-change: transform;
+  animation: amb-drift 120s linear infinite alternate;
+}
+.amb-cloudy .amb-cloud { background: rgba(255, 255, 255, 0.14); }
+@keyframes amb-drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(140vw); }
 }
 
-.seg {
-  display: inline-flex;
-  align-self: flex-start;
+/* fog bands */
+.amb-band {
+  position: absolute;
+  left: -20vw;
+  width: 60vw;
+  height: 14vh;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  padding: 2px;
+  filter: blur(26px);
+  will-change: transform;
+  animation: amb-drift 90s linear infinite alternate;
 }
+.amb-band.alt { animation-direction: alternate-reverse; }
+.amb-band:nth-child(3) { animation-direction: alternate-reverse; }
 
-.seg-btn {
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-2);
-  background: transparent;
-  border: 0;
-  border-radius: 999px;
-  padding: 3px 10px;
-  cursor: pointer;
+/* rain */
+.amb-rain-layer {
+  position: absolute;
+  inset: -100% 0 0 0;
+  height: 200%;
+  background-image: repeating-linear-gradient(
+    105deg,
+    rgba(200, 220, 255, 0) 0 12px,
+    rgba(200, 220, 255, 0.25) 12px 13px,
+    rgba(200, 220, 255, 0) 13px 24px
+  );
+  will-change: transform;
+  animation: amb-fall 0.6s linear infinite;
 }
-
-.seg-btn.active {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.22);
+.amb-rain.drizzle .amb-rain-layer { animation-duration: 1.1s; }
+.amb-rain-layer.far { opacity: 0.5; animation-duration: 0.9s; }
+.amb-rain.storm .amb-rain-layer { opacity: 0.7; }
+.amb-rain.storm .amb-rain-layer.far { opacity: 0.4; }
+@keyframes amb-fall {
+  from { transform: translate3d(0, -25%, 0); }
+  to { transform: translate3d(-8%, 0, 0); }
 }
-
-.sidebar-toggle {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 30;
-  width: 36px;
-  height: 36px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  color: var(--text);
-  background: var(--glass-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.sidebar-backdrop {
-  position: fixed;
+.amb-flash {
+  position: absolute;
   inset: 0;
-  z-index: 15;
-  display: none;
-  background: rgba(0, 0, 0, 0.4);
-  border: 0;
+  background: #fff;
+  opacity: 0;
+  will-change: opacity;
+  animation: amb-lightning 9s linear infinite;
+}
+@keyframes amb-lightning {
+  0%, 97%, 100% { opacity: 0; }
+  98% { opacity: 0.35; }
+  98.5% { opacity: 0; }
 }
 
-@media (max-width: 899px) {
-  #app {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform: translateX(-100%);
-    transition: transform 240ms var(--ease);
-  }
-  .sidebar.open {
-    transform: translateX(0);
-  }
-  .sidebar.open ~ .sidebar-backdrop,
-  body:has(.sidebar.open) .sidebar-backdrop {
-    display: block;
-  }
-  .sidebar-toggle {
-    display: flex;
-  }
-  main {
-    padding-top: 56px;
-  }
+/* snow */
+.amb-snow-layer {
+  position: absolute;
+  inset: -50% 0 0 0;
+  height: 200%;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.85) 1px, transparent 2px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.6) 1px, transparent 2px);
+  background-size: 60px 60px, 120px 120px;
+  background-position: 0 0, 30px 40px;
+  will-change: transform;
+  animation: amb-snowfall 8s linear infinite;
+}
+.amb-snow-layer.big {
+  animation-duration: 12s;
+  animation-name: amb-snowfall-big;
+  opacity: 0.8;
+}
+@keyframes amb-snowfall {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-4%, 25%, 0); }
+}
+@keyframes amb-snowfall-big {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(6%, 25%, 0); }
 }
 
-@media (min-width: 900px) {
-  .sidebar-toggle {
+@media (prefers-reduced-motion: reduce) {
+  .ambient * {
+    animation: none !important;
+  }
+  .amb-flash {
     display: none;
   }
 }
@@ -1025,6 +318,7 @@ import { renderHourly } from "./ui/hourly";
 import { renderDaily } from "./ui/daily";
 import { renderCards } from "./ui/cards";
 import { initSidebar } from "./ui/sidebar";
+import { setAmbient } from "./ambient";
 
 const DEFAULT: Location = {
   name: "Berlin",
@@ -1075,6 +369,7 @@ function applySky(bundle: WeatherBundle): void {
   back.classList.add("active");
   front.classList.remove("active");
   skyFront = 1 - skyFront;
+  setAmbient(cond.kind, c.isDay);
 }
 
 function renderMain(main: HTMLElement, b: WeatherBundle): void {
