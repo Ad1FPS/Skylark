@@ -12,8 +12,15 @@ export function renderHero(b: WeatherBundle, s: Settings): HTMLElement {
   const sub = [b.location.admin1, b.location.country].filter(Boolean).map((x) => esc(x as string)).join(", ");
 
   let summary = `Feels like ${tempDeg(c.apparent, s)}.`;
-  const wetHour = b.hourly.find((h) => (h.precipitationProbability ?? 0) >= 40);
-  if (wetHour) summary += ` Rain likely around ${hourLabel(wetHour.time, s)}.`;
+  const wetIdx = b.minutely.slice(0, 9).findIndex((m) => m.precipitation >= 0.1);
+  if (wetIdx === 0) {
+    summary += " Raining now.";
+  } else if (wetIdx > 0) {
+    summary += ` Rain in ${wetIdx * 15} min.`;
+  } else {
+    const wetHour = b.hourly.find((h) => (h.precipitationProbability ?? 0) >= 40);
+    if (wetHour) summary += ` Rain likely around ${hourLabel(wetHour.time, s)}.`;
+  }
 
   const stale = b.stale
     ? `<div class="pill">Offline, showing saved data</div>`

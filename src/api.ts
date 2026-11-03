@@ -24,3 +24,11 @@ export function saveLocation(location: Location): Promise<Location[]> {
 export function removeLocation(latitude: number, longitude: number): Promise<Location[]> {
   return invoke<Location[]>("remove_location", { latitude, longitude });
 }
+
+export function locateIp(): Promise<Location> {
+  return invoke<Location>("locate_ip");
+}
+
+export function setCurrentLocation(location: Location): Promise<void> {
+  return invoke<void>("set_current_location", { location });
+}

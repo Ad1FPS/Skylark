@@ -8,6 +8,10 @@ use commands::Http;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Must be registered first: a second launch just reopens the existing instance's window.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            tray::show_window(app);
+        }))
         .plugin(tauri_plugin_opener::init())
         .manage(Http::new())
         .invoke_handler(tauri::generate_handler![

@@ -2,15 +2,25 @@ import "./styles.css";
 import "./styles/cards.css";
 import "./styles/sidebar.css";
 import "./styles/radar.css";
+import "./styles/nowcast.css";
+import "./styles/locate.css";
 import type { Location, WeatherBundle } from "./types";
 import { describe, skyGradient } from "./theme";
-import { getCached, getSaved, getWeather, saveLocation } from "./api";
+import {
+  getCached,
+  getSaved,
+  getWeather,
+  saveLocation,
+  locateIp,
+  setCurrentLocation,
+} from "./api";
 import { state, set, subscribe } from "./state";
 import { renderHero } from "./ui/hero";
 import { renderHourly } from "./ui/hourly";
 import { renderDaily } from "./ui/daily";
 import { renderCards } from "./ui/cards";
 import { renderRadar } from "./ui/radar";
+import { renderNowcast } from "./ui/nowcast";
 import { initSidebar } from "./ui/sidebar";
 import { setAmbient } from "./ambient";
 
@@ -78,7 +88,10 @@ function renderMain(main: HTMLElement, b: WeatherBundle): void {
   const daily = renderDaily(b, state.settings);
   daily.classList.add("span-2", "row-2");
   grid.appendChild(daily);
-  grid.appendChild(renderRadar(b));
+  const radar = renderRadar(b);
+  const nowcast = renderNowcast(b, state.settings);
+  if (nowcast) radar.appendChild(nowcast);
+  grid.appendChild(radar);
   for (const card of renderCards(b, state.settings)) grid.appendChild(card);
   main.appendChild(grid);
 }
@@ -107,6 +120,7 @@ async function selectLocation(loc: Location): Promise<void> {
   if (!main) return;
 
   set({ current: loc, loading: true, error: null });
+  setCurrentLocation(loc).catch(() => {});
 
   try {
     const cached = await getCached(loc);
@@ -147,14 +161,23 @@ async function init(): Promise<void> {
     saved = [];
   }
   if (saved.length === 0) {
+    let located: Location | null = null;
     try {
-      saved = await saveLocation(DEFAULT);
+      located = await locateIp();
     } catch {
-      saved = [DEFAULT];
+      located = null;
     }
+    const start = located ?? DEFAULT;
+    try {
+      saved = await saveLocation(start);
+    } catch {
+      saved = [start];
+    }
+    if (saved.length === 0) saved = [start];
   }
   set({ saved });
   const loc = saved[0] ?? DEFAULT;
+  setCurrentLocation(loc).catch(() => {});
 
   try {
     const cached = await getCached(loc);

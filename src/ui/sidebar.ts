@@ -1,6 +1,6 @@
 import type { Location, Settings, WeatherBundle } from "../types";
 import { state, set, subscribe } from "../state";
-import { searchCity, saveLocation, removeLocation, getWeather, getCached } from "../api";
+import { searchCity, saveLocation, removeLocation, getWeather, getCached, locateIp } from "../api";
 import { esc, saveSettings, tempDeg } from "../format";
 import { describe } from "../theme";
 import { conditionIcon, icon } from "../icons";
@@ -59,6 +59,52 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
   `;
   const input = searchWrap.querySelector("input") as HTMLInputElement;
 
+  // Locate button (built once, next to the search box).
+  const locateBtn = document.createElement("button");
+  locateBtn.type = "button";
+  locateBtn.className = "locate-btn";
+  locateBtn.title = "Uses your IP address to find your approximate location";
+  const locateLabel = (): string => `${icon("locate", 16)}<span>Use my location</span>`;
+  locateBtn.innerHTML = locateLabel();
+
+  const locateError = document.createElement("div");
+  locateError.className = "locate-error";
+  locateError.hidden = true;
+
+  const locateWrap = document.createElement("div");
+  locateWrap.className = "locate-wrap";
+  locateWrap.append(locateBtn, locateError);
+
+  let errTimer: number | undefined;
+
+  locateBtn.addEventListener("click", () => {
+    if (locateBtn.disabled) return;
+    locateBtn.disabled = true;
+    locateBtn.innerHTML = `<span>Locating\u2026</span>`;
+    void (async () => {
+      try {
+        const loc = await locateIp();
+        try {
+          const updated = await saveLocation(loc);
+          set({ saved: updated });
+        } catch {
+          /* ignore save errors */
+        }
+        onSelect(loc);
+      } catch {
+        locateError.textContent = "Could not find your location";
+        locateError.hidden = false;
+        if (errTimer !== undefined) window.clearTimeout(errTimer);
+        errTimer = window.setTimeout(() => {
+          locateError.hidden = true;
+        }, 4000);
+      } finally {
+        locateBtn.disabled = false;
+        locateBtn.innerHTML = locateLabel();
+      }
+    })();
+  });
+
   const results = document.createElement("div");
   results.className = "side-results";
   results.hidden = true;
@@ -69,7 +115,7 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
   const settingsBox = document.createElement("div");
   settingsBox.className = "side-settings";
 
-  root.append(searchWrap, results, list, settingsBox);
+  root.append(searchWrap, locateWrap, results, list, settingsBox);
 
   let reqId = 0;
   let timer: number | undefined;
