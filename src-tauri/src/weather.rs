@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 const FORECAST_URL: &str = "https://api.open-meteo.com/v1/forecast";
 const AIR_URL: &str = "https://air-quality-api.open-meteo.com/v1/air-quality";
 const GEOCODE_URL: &str = "https://geocoding-api.open-meteo.com/v1/search";
+const IP_URL: &str = "https://ipwho.is/";
 
 const CURRENT_FIELDS: &str = "temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,visibility,uv_index,precipitation";
 const HOURLY_FIELDS: &str = "temperature_2m,weather_code,precipitation_probability,is_day";
@@ -30,6 +31,15 @@ pub struct WeatherBundle {
     pub hourly: Vec<Hour>,
     pub daily: Vec<Day>,
     pub air: Option<Air>,
+    #[serde(default)]
+    pub minutely: Vec<Minute>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Minute {
+    pub time: String,
+    pub precipitation: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -93,6 +103,8 @@ struct RawForecast {
     hourly: Option<RawHourly>,
     #[serde(default)]
     daily: Option<RawDaily>,
+    #[serde(default)]
+    minutely_15: Option<RawMinutely>,
 }
 
 #[derive(Deserialize)]
@@ -160,6 +172,14 @@ struct RawDaily {
 }
 
 #[derive(Deserialize)]
+struct RawMinutely {
+    #[serde(default)]
+    time: Vec<String>,
+    #[serde(default)]
+    precipitation: Vec<Option<f32>>,
+}
+
+#[derive(Deserialize)]
 struct RawAir {
     current: Option<RawAirCurrent>,
 }
@@ -186,6 +206,22 @@ struct RawGeoResult {
     country: String,
     #[serde(default)]
     admin1: Option<String>,
+    #[serde(default)]
+    latitude: f64,
+    #[serde(default)]
+    longitude: f64,
+}
+
+#[derive(Deserialize)]
+struct RawIp {
+    #[serde(default)]
+    success: bool,
+    #[serde(default)]
+    city: String,
+    #[serde(default)]
+    region: String,
+    #[serde(default)]
+    country: String,
     #[serde(default)]
     latitude: f64,
     #[serde(default)]
@@ -251,6 +287,16 @@ pub fn parse_forecast(json: &str, loc: &Location, air: Option<Air>, now: i64) ->
         }
     }
 
+    let mut minutely = Vec::new();
+    if let Some(m) = &raw.minutely_15 {
+        for (i, time) in m.time.iter().enumerate().take(32) {
+            minutely.push(Minute {
+                time: time.clone(),
+                precipitation: m.precipitation.get(i).copied().flatten().unwrap_or(0.0),
+            });
+        }
+    }
+
     Ok(WeatherBundle {
         location: loc.clone(),
         fetched_at: now,
@@ -261,6 +307,7 @@ pub fn parse_forecast(json: &str, loc: &Location, air: Option<Air>, now: i64) ->
         hourly,
         daily,
         air,
+        minutely,
     })
 }
 
@@ -289,6 +336,26 @@ pub fn parse_geocode(json: &str) -> Vec<Location> {
             longitude: r.longitude,
         })
         .collect()
+}
+
+pub fn parse_ip_location(json: &str) -> Result<Location, String> {
+    let raw: RawIp =
+        serde_json::from_str(json).map_err(|_| "Could not determine location".to_string())?;
+    if !raw.success || raw.city.trim().is_empty() {
+        return Err("Could not determine location".into());
+    }
+    let admin1 = if raw.region.trim().is_empty() {
+        None
+    } else {
+        Some(raw.region)
+    };
+    Ok(Location {
+        name: raw.city,
+        country: raw.country,
+        admin1,
+        latitude: raw.latitude,
+        longitude: raw.longitude,
+    })
 }
 
 /// First 13 chars of an ISO time: `YYYY-MM-DDTHH`.
@@ -339,6 +406,9 @@ pub async fn fetch_bundle(client: &reqwest::Client, loc: &Location) -> Result<We
             ("current", CURRENT_FIELDS),
             ("hourly", HOURLY_FIELDS),
             ("daily", DAILY_FIELDS),
+            ("minutely_15", "precipitation"),
+            ("forecast_minutely_15", "32"),
+            ("past_minutely_15", "0"),
             ("forecast_days", "10"),
             ("timezone", "auto"),
         ],
@@ -374,6 +444,16 @@ pub async fn search(client: &reqwest::Client, query: &str) -> Result<Vec<Locatio
     let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
     let text = get_text(resp).await?;
     Ok(parse_geocode(&text))
+}
+
+pub async fn locate_ip(client: &reqwest::Client) -> Result<Location, String> {
+    let url = build_url(
+        IP_URL,
+        &[("fields", "success,city,region,country,latitude,longitude")],
+    );
+    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let text = get_text(resp).await?;
+    parse_ip_location(&text)
 }
 
 fn now_secs() -> i64 {
@@ -414,6 +494,7 @@ mod tests {
         assert_eq!(bundle.timezone, "Europe/London");
         assert_eq!(bundle.air.as_ref().map(|a| a.us_aqi), Some(26));
         assert!(!bundle.stale);
+        assert_eq!(bundle.minutely.len(), 32);
     }
 
     #[test]
@@ -426,5 +507,23 @@ mod tests {
     #[test]
     fn empty_geocode() {
         assert!(parse_geocode("{}").is_empty());
+    }
+
+    #[test]
+    fn parses_ip_location() {
+        let json = r#"{"success":true,"country":"Germany","region":"Hessen","city":"Frankfurt am Main","latitude":50.11,"longitude":8.68}"#;
+        let loc = parse_ip_location(json).expect("parse");
+        assert_eq!(loc.name, "Frankfurt am Main");
+        assert_eq!(loc.country, "Germany");
+        assert_eq!(loc.admin1.as_deref(), Some("Hessen"));
+        assert_eq!(loc.latitude, 50.11);
+        assert_eq!(loc.longitude, 8.68);
+    }
+
+    #[test]
+    fn ip_location_failure() {
+        assert!(parse_ip_location(r#"{"success":false}"#).is_err());
+        assert!(parse_ip_location(r#"{"success":true,"city":""}"#).is_err());
+        assert!(parse_ip_location("not json").is_err());
     }
 }

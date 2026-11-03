@@ -99,6 +99,7 @@ mod tests {
                 sunset: "2026-11-03T16:30".into(),
             }],
             air: Some(Air { us_aqi: 26, pm2_5: 4.8 }),
+            minutely: Vec::new(),
         }
     }
 

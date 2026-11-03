@@ -1,5 +1,6 @@
 mod commands;
 mod store;
+mod tray;
 mod weather;
 
 use commands::Http;
@@ -11,12 +12,26 @@ pub fn run() {
         .manage(Http::new())
         .invoke_handler(tauri::generate_handler![
             commands::search_city,
+            commands::locate_ip,
             commands::get_cached,
             commands::get_weather,
             commands::get_saved,
             commands::save_location,
             commands::remove_location,
+            commands::set_current_location,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .setup(|app| {
+            tray::setup(app.handle())?;
+            tray::start_background_refresh(app.handle());
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            if let tauri::RunEvent::ExitRequested { api, code, .. } = event
+                && code.is_none()
+            {
+                api.prevent_exit();
+            }
+        });
 }

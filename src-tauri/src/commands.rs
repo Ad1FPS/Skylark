@@ -4,9 +4,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, State};
 
 use crate::store;
+use crate::tray;
 use crate::weather::{self, Location, WeatherBundle};
 
 const CACHE_TTL_SECS: i64 = 600;
+const CURRENT_FILE: &str = "current.json";
 
 pub struct Http(pub reqwest::Client);
 
@@ -34,11 +36,11 @@ fn now_secs() -> i64 {
         .unwrap_or(0)
 }
 
-fn cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path().app_cache_dir().map_err(|e| e.to_string())
 }
 
-fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path().app_data_dir().map_err(|e| e.to_string())
 }
 
@@ -49,6 +51,11 @@ pub async fn search_city(http: State<'_, Http>, query: String) -> Result<Vec<Loc
         return Ok(Vec::new());
     }
     weather::search(&http.0, &query).await
+}
+
+#[tauri::command]
+pub async fn locate_ip(http: State<'_, Http>) -> Result<Location, String> {
+    weather::locate_ip(&http.0).await
 }
 
 #[tauri::command]
@@ -127,6 +134,26 @@ pub fn remove_location(
     list.retain(|l| !same_place(l, latitude, longitude));
     store::write_saved(&dir, &list)?;
     Ok(list)
+}
+
+#[tauri::command]
+pub fn set_current_location(app: AppHandle, location: Location) -> Result<(), String> {
+    let dir = data_dir(&app)?;
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let text = serde_json::to_string(&location).map_err(|e| e.to_string())?;
+    std::fs::write(dir.join(CURRENT_FILE), text).map_err(|e| e.to_string())?;
+    tray::refresh_now(&app);
+    Ok(())
+}
+
+pub fn read_current_location(app: &AppHandle) -> Option<Location> {
+    let dir = data_dir(app).ok()?;
+    if let Ok(text) = std::fs::read_to_string(dir.join(CURRENT_FILE))
+        && let Ok(loc) = serde_json::from_str::<Location>(&text)
+    {
+        return Some(loc);
+    }
+    store::read_saved(&dir).into_iter().next()
 }
 
 #[cfg(test)]
