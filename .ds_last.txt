@@ -1,744 +1,958 @@
-=== FILE: src-tauri/src/weather.rs ===
-use serde::{Deserialize, Serialize};
+=== FILE: index.html ===
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
+=== END ===
 
-const FORECAST_URL: &str = "https://api.open-meteo.com/v1/forecast";
-const AIR_URL: &str = "https://air-quality-api.open-meteo.com/v1/air-quality";
-const GEOCODE_URL: &str = "https://geocoding-api.open-meteo.com/v1/search";
-
-const CURRENT_FIELDS: &str = "temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,visibility,uv_index,precipitation";
-const HOURLY_FIELDS: &str = "temperature_2m,weather_code,precipitation_probability,is_day";
-const DAILY_FIELDS: &str = "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,uv_index_max,sunrise,sunset";
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Location {
-    pub name: String,
-    pub country: String,
-    pub admin1: Option<String>,
-    pub latitude: f64,
-    pub longitude: f64,
+=== FILE: src/styles.css ===
+:root {
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --text: #fff;
+  --text-2: rgba(255, 255, 255, 0.72);
+  --text-3: rgba(255, 255, 255, 0.5);
+  --glass: rgba(15, 23, 42, 0.24);
+  --glass-strong: rgba(15, 23, 42, 0.38);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-blur: blur(18px) saturate(140%);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --gap: 12px;
+  --pad: 16px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct WeatherBundle {
-    pub location: Location,
-    pub fetched_at: i64,
-    pub stale: bool,
-    pub timezone: String,
-    pub utc_offset_seconds: i32,
-    pub current: Current,
-    pub hourly: Vec<Hour>,
-    pub daily: Vec<Day>,
-    pub air: Option<Air>,
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Current {
-    pub time: String,
-    pub temperature: f32,
-    pub apparent: f32,
-    pub humidity: u8,
-    pub is_day: bool,
-    pub weather_code: u8,
-    pub wind_speed: f32,
-    pub wind_direction: u16,
-    pub pressure: f32,
-    pub visibility: f32,
-    pub uv_index: f32,
-    pub precipitation: f32,
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Hour {
-    pub time: String,
-    pub temperature: f32,
-    pub weather_code: u8,
-    pub precipitation_probability: Option<u8>,
-    pub is_day: bool,
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  background: #0b1230;
+  min-width: 760px;
+  overflow: hidden;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Day {
-    pub date: String,
-    pub weather_code: u8,
-    pub temp_max: f32,
-    pub temp_min: f32,
-    pub precipitation_probability_max: Option<u8>,
-    pub precipitation_sum: f32,
-    pub uv_index_max: f32,
-    pub sunrise: String,
-    pub sunset: String,
+#app {
+  position: relative;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 232px 1fr;
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct Air {
-    pub us_aqi: u16,
-    pub pm2_5: f32,
+.sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
 }
 
-// --- raw API shapes ---
-
-#[derive(Deserialize)]
-struct RawForecast {
-    #[serde(default)]
-    utc_offset_seconds: i32,
-    #[serde(default)]
-    timezone: String,
-    current: Option<RawCurrent>,
-    #[serde(default)]
-    hourly: Option<RawHourly>,
-    #[serde(default)]
-    daily: Option<RawDaily>,
+.sky-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 800ms var(--ease);
 }
 
-#[derive(Deserialize)]
-struct RawCurrent {
-    #[serde(default)]
-    time: String,
-    #[serde(default)]
-    temperature_2m: Option<f32>,
-    #[serde(default)]
-    apparent_temperature: Option<f32>,
-    #[serde(default)]
-    relative_humidity_2m: Option<f32>,
-    #[serde(default)]
-    is_day: Option<u8>,
-    #[serde(default)]
-    weather_code: Option<u8>,
-    #[serde(default)]
-    wind_speed_10m: Option<f32>,
-    #[serde(default)]
-    wind_direction_10m: Option<f32>,
-    #[serde(default)]
-    pressure_msl: Option<f32>,
-    #[serde(default)]
-    visibility: Option<f32>,
-    #[serde(default)]
-    uv_index: Option<f32>,
-    #[serde(default)]
-    precipitation: Option<f32>,
+.sky-layer.active {
+  opacity: 1;
 }
 
-#[derive(Deserialize)]
-struct RawHourly {
-    #[serde(default)]
-    time: Vec<String>,
-    #[serde(default)]
-    temperature_2m: Vec<Option<f32>>,
-    #[serde(default)]
-    weather_code: Vec<Option<u8>>,
-    #[serde(default)]
-    precipitation_probability: Vec<Option<u8>>,
-    #[serde(default)]
-    is_day: Vec<Option<u8>>,
+.sidebar {
+  min-width: 0;
 }
 
-#[derive(Deserialize)]
-struct RawDaily {
-    #[serde(default)]
-    time: Vec<String>,
-    #[serde(default)]
-    weather_code: Vec<Option<u8>>,
-    #[serde(default)]
-    temperature_2m_max: Vec<Option<f32>>,
-    #[serde(default)]
-    temperature_2m_min: Vec<Option<f32>>,
-    #[serde(default)]
-    precipitation_probability_max: Vec<Option<u8>>,
-    #[serde(default)]
-    precipitation_sum: Vec<Option<f32>>,
-    #[serde(default)]
-    uv_index_max: Vec<Option<f32>>,
-    #[serde(default)]
-    sunrise: Vec<String>,
-    #[serde(default)]
-    sunset: Vec<String>,
+main {
+  min-width: 0;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
 }
 
-#[derive(Deserialize)]
-struct RawAir {
-    current: Option<RawAirCurrent>,
+.card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-lg);
+  padding: var(--pad);
 }
 
-#[derive(Deserialize)]
-struct RawAirCurrent {
-    #[serde(default)]
-    us_aqi: Option<f32>,
-    #[serde(default)]
-    pm2_5: Option<f32>,
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin: 0 0 12px;
 }
 
-#[derive(Deserialize)]
-struct RawGeocode {
-    #[serde(default)]
-    results: Option<Vec<RawGeoResult>>,
+/* Hero */
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hero-city {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.hero-city small {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.hero-temp {
+  font-family: var(--font-display);
+  font-size: 96px;
+  font-weight: 200;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.hero-temp sup {
+  font-size: 0.5em;
+  vertical-align: super;
+  font-weight: 300;
+}
+.hero-cond {
+  font-size: 18px;
+  font-weight: 500;
+}
+.hero-hl {
+  font-size: 14px;
+  color: var(--text-2);
+}
+.hero-summary {
+  font-size: 14px;
+  color: var(--text-2);
+}
+.pill {
+  align-self: flex-start;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 4px 10px;
 }
 
-#[derive(Deserialize)]
-struct RawGeoResult {
-    #[serde(default)]
-    name: String,
-    #[serde(default)]
-    country: String,
-    #[serde(default)]
-    admin1: Option<String>,
-    #[serde(default)]
-    latitude: f64,
-    #[serde(default)]
-    longitude: f64,
+/* Hourly */
+.hourly-scroll {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  position: relative;
+  padding-bottom: 4px;
+}
+.hourly-spark {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  pointer-events: none;
+}
+.hour-col {
+  min-width: 56px;
+  width: 56px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  position: relative;
+  z-index: 1;
+}
+.hour-col .hour-label {
+  color: var(--text-2);
+  font-size: 12px;
+}
+.hour-col.is-now .hour-label {
+  color: var(--text);
+  font-weight: 600;
+}
+.hour-temp {
+  font-size: 14px;
+  font-weight: 500;
+}
+.hour-rain {
+  font-size: 11px;
+  color: #7cc4ff;
+  min-height: 14px;
 }
 
-fn idx<T: Copy + Default>(v: &[Option<T>], i: usize) -> T {
-    v.get(i).and_then(|x| *x).unwrap_or_default()
+/* Daily */
+.daily {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.daily-row {
+  display: grid;
+  grid-template-columns: 44px 28px 40px 36px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+}
+.daily-row:last-child {
+  border-bottom: 0;
+}
+.daily-day {
+  color: var(--text);
+}
+.daily-rain {
+  font-size: 12px;
+  color: #7cc4ff;
+}
+.daily-min,
+.daily-max {
+  text-align: right;
+  color: var(--text-2);
+}
+.daily-max {
+  color: var(--text);
+}
+.daily-bar {
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  position: relative;
+  overflow: hidden;
+}
+.daily-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
 }
 
-pub fn parse_forecast(json: &str, loc: &Location, air: Option<Air>, now: i64) -> Result<WeatherBundle, String> {
-    let raw: RawForecast = serde_json::from_str(json).map_err(|e| format!("bad forecast: {e}"))?;
-
-    let rc = raw.current.ok_or("missing current")?;
-    let current = Current {
-        time: rc.time,
-        temperature: rc.temperature_2m.unwrap_or(0.0),
-        apparent: rc.apparent_temperature.unwrap_or(0.0),
-        humidity: rc.relative_humidity_2m.unwrap_or(0.0).clamp(0.0, 255.0) as u8,
-        is_day: rc.is_day.unwrap_or(0) != 0,
-        weather_code: rc.weather_code.unwrap_or(0),
-        wind_speed: rc.wind_speed_10m.unwrap_or(0.0),
-        wind_direction: rc.wind_direction_10m.unwrap_or(0.0).clamp(0.0, u16::MAX as f32) as u16,
-        pressure: rc.pressure_msl.unwrap_or(0.0),
-        visibility: rc.visibility.unwrap_or(0.0),
-        uv_index: rc.uv_index.unwrap_or(0.0),
-        precipitation: rc.precipitation.unwrap_or(0.0),
-    };
-
-    let mut hourly = Vec::new();
-    if let Some(h) = &raw.hourly {
-        let start_key = first_key(&current.time);
-        let start = h
-            .time
-            .iter()
-            .position(|t| first_key(t) == start_key)
-            .unwrap_or(0);
-        for i in start..h.time.len().min(start + 24) {
-            hourly.push(Hour {
-                time: h.time[i].clone(),
-                temperature: idx(&h.temperature_2m, i),
-                weather_code: idx(&h.weather_code, i),
-                precipitation_probability: h.precipitation_probability.get(i).copied().flatten(),
-                is_day: idx(&h.is_day, i) != 0,
-            });
-        }
-    }
-
-    let mut daily = Vec::new();
-    if let Some(d) = &raw.daily {
-        for i in 0..d.time.len().min(10) {
-            daily.push(Day {
-                date: d.time[i].clone(),
-                weather_code: idx(&d.weather_code, i),
-                temp_max: idx(&d.temperature_2m_max, i),
-                temp_min: idx(&d.temperature_2m_min, i),
-                precipitation_probability_max: d.precipitation_probability_max.get(i).copied().flatten(),
-                precipitation_sum: idx(&d.precipitation_sum, i),
-                uv_index_max: idx(&d.uv_index_max, i),
-                sunrise: d.sunrise.get(i).cloned().unwrap_or_default(),
-                sunset: d.sunset.get(i).cloned().unwrap_or_default(),
-            });
-        }
-    }
-
-    Ok(WeatherBundle {
-        location: loc.clone(),
-        fetched_at: now,
-        stale: false,
-        timezone: raw.timezone,
-        utc_offset_seconds: raw.utc_offset_seconds,
-        current,
-        hourly,
-        daily,
-        air,
-    })
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--gap);
+}
+.span-2 {
+  grid-column: span 2;
+}
+.row-2 {
+  grid-row: span 2;
 }
 
-pub fn parse_air(json: &str) -> Option<Air> {
-    let raw: RawAir = serde_json::from_str(json).ok()?;
-    let c = raw.current?;
-    Some(Air {
-        us_aqi: c.us_aqi.unwrap_or(0.0).clamp(0.0, u16::MAX as f32) as u16,
-        pm2_5: c.pm2_5.unwrap_or(0.0),
-    })
+.loading,
+.error {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  color: var(--text-2);
+}
+.error button {
+  font: inherit;
+  color: var(--text);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  cursor: pointer;
 }
 
-pub fn parse_geocode(json: &str) -> Vec<Location> {
-    let raw: RawGeocode = match serde_json::from_str(json) {
-        Ok(r) => r,
-        Err(_) => return Vec::new(),
-    };
-    raw.results
-        .unwrap_or_default()
-        .into_iter()
-        .map(|r| Location {
-            name: r.name,
-            country: r.country,
-            admin1: r.admin1,
-            latitude: r.latitude,
-            longitude: r.longitude,
-        })
-        .collect()
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/// First 13 chars of an ISO time: `YYYY-MM-DDTHH`.
-fn first_key(time: &str) -> &str {
-    time.get(..13).unwrap_or(time)
-}
-
-/// Builds a query string, percent-encoding values. `reqwest` without the
-/// `query` feature lacks `RequestBuilder::query`, so we assemble URLs directly.
-fn build_url(base: &str, params: &[(&str, &str)]) -> String {
-    let mut out = String::from(base);
-    for (i, (k, v)) in params.iter().enumerate() {
-        out.push(if i == 0 { '?' } else { '&' });
-        out.push_str(&encode(k));
-        out.push('=');
-        out.push_str(&encode(v));
-    }
-    out
-}
-
-fn encode(raw: &str) -> String {
-    let mut out = String::with_capacity(raw.len());
-    for b in raw.bytes() {
-        match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(b as char)
-            }
-            _ => out.push_str(&format!("%{b:02X}")),
-        }
-    }
-    out
-}
-
-async fn get_text(resp: reqwest::Response) -> Result<String, String> {
-    let resp = resp.error_for_status().map_err(|e| e.to_string())?;
-    resp.text().await.map_err(|e| e.to_string())
-}
-
-pub async fn fetch_bundle(client: &reqwest::Client, loc: &Location) -> Result<WeatherBundle, String> {
-    let lat = loc.latitude.to_string();
-    let lon = loc.longitude.to_string();
-
-    let forecast_url = build_url(
-        FORECAST_URL,
-        &[
-            ("latitude", &lat),
-            ("longitude", &lon),
-            ("current", CURRENT_FIELDS),
-            ("hourly", HOURLY_FIELDS),
-            ("daily", DAILY_FIELDS),
-            ("forecast_days", "10"),
-            ("timezone", "auto"),
-        ],
-    );
-    let air_url = build_url(
-        AIR_URL,
-        &[
-            ("latitude", &lat),
-            ("longitude", &lon),
-            ("current", "us_aqi,pm2_5"),
-        ],
-    );
-
-    let (forecast_res, air_res) = tokio::join!(client.get(&forecast_url).send(), client.get(&air_url).send());
-
-    let forecast_json = get_text(forecast_res.map_err(|e| e.to_string())?).await?;
-    let air = match air_res {
-        Ok(resp) => match get_text(resp).await {
-            Ok(text) => parse_air(&text),
-            Err(_) => None,
-        },
-        Err(_) => None,
-    };
-
-    parse_forecast(&forecast_json, loc, air, now_secs())
-}
-
-pub async fn search(client: &reqwest::Client, query: &str) -> Result<Vec<Location>, String> {
-    let url = build_url(
-        GEOCODE_URL,
-        &[("name", query), ("count", "8"), ("language", "en")],
-    );
-    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
-    let text = get_text(resp).await?;
-    Ok(parse_geocode(&text))
-}
-
-fn now_secs() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn london() -> Location {
-        Location {
-            name: "London".into(),
-            country: "United Kingdom".into(),
-            admin1: Some("England".into()),
-            latitude: 51.50853,
-            longitude: -0.12574,
-        }
-    }
-
-    #[test]
-    fn parses_forecast() {
-        let air = parse_air(include_str!("../tests/fixtures/air.json"));
-        let bundle = parse_forecast(
-            include_str!("../tests/fixtures/forecast.json"),
-            &london(),
-            air,
-            1_700_000_000,
-        )
-        .expect("parse");
-        assert_eq!(bundle.daily.len(), 10);
-        assert_eq!(bundle.hourly.len(), 24);
-        assert_eq!(bundle.hourly[0].time, "2026-11-03T18:00");
-        assert_eq!(bundle.current.temperature, 10.7);
-        assert_eq!(bundle.timezone, "Europe/London");
-        assert_eq!(bundle.air.as_ref().map(|a| a.us_aqi), Some(26));
-        assert!(!bundle.stale);
-    }
-
-    #[test]
-    fn parses_geocode() {
-        let list = parse_geocode(include_str!("../tests/fixtures/geocode.json"));
-        assert_eq!(list.first().map(|l| l.name.as_str()), Some("London"));
-        assert_eq!(list.first().map(|l| l.country.as_str()), Some("United Kingdom"));
-    }
-
-    #[test]
-    fn empty_geocode() {
-        assert!(parse_geocode("{}").is_empty());
-    }
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 === END ===
 
-=== FILE: src-tauri/src/store.rs ===
-use std::fs;
-use std::path::Path;
+=== FILE: src/api.ts ===
+import { invoke } from "@tauri-apps/api/core";
+import type { Location, WeatherBundle } from "./types";
 
-use crate::weather::{Location, WeatherBundle};
-
-const SAVED: &str = "saved.json";
-
-pub fn cache_key(loc: &Location) -> String {
-    format!("{:.2}_{:.2}.json", loc.latitude, loc.longitude)
+export function searchCity(query: string): Promise<Location[]> {
+  return invoke<Location[]>("search_city", { query });
 }
 
-pub fn read_cache(dir: &Path, loc: &Location) -> Option<WeatherBundle> {
-    let text = fs::read_to_string(dir.join(cache_key(loc))).ok()?;
-    serde_json::from_str(&text).ok()
+export function getCached(location: Location): Promise<WeatherBundle | null> {
+  return invoke<WeatherBundle | null>("get_cached", { location });
 }
 
-pub fn write_cache(dir: &Path, bundle: &WeatherBundle) {
-    let _ = fs::create_dir_all(dir);
-    let Ok(text) = serde_json::to_string(bundle) else {
-        return;
-    };
-    let key = cache_key(&bundle.location);
-    let tmp = dir.join(format!("{key}.tmp"));
-    if fs::write(&tmp, text).is_ok() {
-        let _ = fs::rename(&tmp, dir.join(key));
-    }
+export function getWeather(location: Location, force: boolean): Promise<WeatherBundle> {
+  return invoke<WeatherBundle>("get_weather", { location, force });
 }
 
-pub fn read_saved(dir: &Path) -> Vec<Location> {
-    fs::read_to_string(dir.join(SAVED))
-        .ok()
-        .and_then(|t| serde_json::from_str(&t).ok())
-        .unwrap_or_default()
+export function getSaved(): Promise<Location[]> {
+  return invoke<Location[]>("get_saved");
 }
 
-pub fn write_saved(dir: &Path, list: &[Location]) -> Result<(), String> {
-    fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-    let text = serde_json::to_string(list).map_err(|e| e.to_string())?;
-    fs::write(dir.join(SAVED), text).map_err(|e| e.to_string())
+export function saveLocation(location: Location): Promise<Location[]> {
+  return invoke<Location[]>("save_location", { location });
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::weather::{Air, Current, Day, Hour};
-    use std::path::PathBuf;
-
-    fn unique_dir(tag: &str) -> PathBuf {
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
-        std::env::temp_dir().join(format!("weatherapp_test_{tag}_{nanos}"))
-    }
-
-    fn sample() -> WeatherBundle {
-        WeatherBundle {
-            location: Location {
-                name: "London".into(),
-                country: "United Kingdom".into(),
-                admin1: Some("England".into()),
-                latitude: 51.50853,
-                longitude: -0.12574,
-            },
-            fetched_at: 1_700_000_000,
-            stale: false,
-            timezone: "Europe/London".into(),
-            utc_offset_seconds: 0,
-            current: Current {
-                time: "2026-11-03T18:00".into(),
-                temperature: 10.7,
-                apparent: 7.9,
-                humidity: 79,
-                is_day: false,
-                weather_code: 3,
-                wind_speed: 14.0,
-                wind_direction: 38,
-                pressure: 1031.0,
-                visibility: 19240.0,
-                uv_index: 0.0,
-                precipitation: 0.0,
-            },
-            hourly: vec![Hour {
-                time: "2026-11-03T18:00".into(),
-                temperature: 10.7,
-                weather_code: 3,
-                precipitation_probability: Some(0),
-                is_day: false,
-            }],
-            daily: vec![Day {
-                date: "2026-11-03".into(),
-                weather_code: 51,
-                temp_max: 12.1,
-                temp_min: 8.4,
-                precipitation_probability_max: Some(20),
-                precipitation_sum: 0.8,
-                uv_index_max: 0.8,
-                sunrise: "2026-11-03T06:57".into(),
-                sunset: "2026-11-03T16:30".into(),
-            }],
-            air: Some(Air { us_aqi: 26, pm2_5: 4.8 }),
-        }
-    }
-
-    #[test]
-    fn cache_roundtrip() {
-        let dir = unique_dir("cache");
-        let bundle = sample();
-        write_cache(&dir, &bundle);
-        let read = read_cache(&dir, &bundle.location).expect("cache present");
-        assert_eq!(read.fetched_at, bundle.fetched_at);
-        assert_eq!(read.current.temperature, bundle.current.temperature);
-        assert_eq!(read.hourly.len(), 1);
-        assert_eq!(read.daily.len(), 1);
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn saved_roundtrip() {
-        let dir = unique_dir("saved");
-        let list = vec![sample().location];
-        write_saved(&dir, &list).expect("write");
-        let read = read_saved(&dir);
-        assert_eq!(read.len(), 1);
-        assert_eq!(read[0].name, "London");
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn saved_missing_is_empty() {
-        assert!(read_saved(&unique_dir("missing")).is_empty());
-    }
+export function removeLocation(latitude: number, longitude: number): Promise<Location[]> {
+  return invoke<Location[]>("remove_location", { latitude, longitude });
 }
 === END ===
 
-=== FILE: src-tauri/src/commands.rs ===
-use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+=== FILE: src/format.ts ===
+import type { Settings } from "./types";
 
-use tauri::{AppHandle, Manager, State};
+const KEY = "weather.settings";
 
-use crate::store;
-use crate::weather::{self, Location, WeatherBundle};
+export const DEFAULT_SETTINGS: Settings = { temp: "c", wind: "kmh", clock: "24" };
 
-const CACHE_TTL_SECS: i64 = 600;
+export function loadSettings(): Settings {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    const parsed = JSON.parse(raw) as Partial<Settings>;
+    return { ...DEFAULT_SETTINGS, ...parsed };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
 
-pub struct Http(pub reqwest::Client);
+export function saveSettings(s: Settings): void {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(s));
+  } catch {
+    /* ignore storage errors */
+  }
+}
 
-impl Http {
-    pub fn new() -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .user_agent("weatherapp/0.1")
-            .build()
-            .unwrap_or_default();
-        Http(client)
+export function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function toF(c: number): number {
+  return c * 9 / 5 + 32;
+}
+
+export function temp(c: number, s: Settings): string {
+  const v = s.temp === "f" ? toF(c) : c;
+  return String(Math.round(v));
+}
+
+export function tempDeg(c: number, s: Settings): string {
+  return `${temp(c, s)}\u00B0`;
+}
+
+export function wind(kmh: number, s: Settings): { value: string; unit: string } {
+  if (s.wind === "mph") return { value: String(Math.round(kmh * 0.621371)), unit: "mph" };
+  if (s.wind === "ms") return { value: String(Math.round(kmh / 3.6)), unit: "m/s" };
+  return { value: String(Math.round(kmh)), unit: "km/h" };
+}
+
+interface ClockParts {
+  h: number;
+  m: number;
+}
+
+function parseLocal(iso: string): ClockParts {
+  // ISO strings from backend are local to the location; take the wall-clock parts.
+  const t = iso.length > 10 ? iso.slice(11, 16) : "00:00";
+  const [hh, mm] = t.split(":").map((x) => parseInt(x, 10));
+  return { h: Number.isFinite(hh) ? hh : 0, m: Number.isFinite(mm) ? mm : 0 };
+}
+
+function hour12(h: number, m: number): string {
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const hasMin = m > 0;
+  const base = hasMin ? `${h12}:${String(m).padStart(2, "0")}` : String(h12);
+  return `${base} ${period}`;
+}
+
+export function hourLabel(iso: string, s: Settings): string {
+  const { h } = parseLocal(iso);
+  if (s.clock === "12") return hour12(h, 0);
+  return String(h);
+}
+
+export function clock(iso: string, s: Settings): string {
+  const { h, m } = parseLocal(iso);
+  if (s.clock === "12") return hour12(h, m);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+export function dayName(isoDate: string, index: number): string {
+  if (index === 0) return "Today";
+  const [y, mo, d] = isoDate.split("-").map((x) => parseInt(x, 10));
+  const date = new Date(y, (mo || 1) - 1, d || 1);
+  return WEEKDAYS[date.getDay()];
+}
+
+export function compass(deg: number): string {
+  const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const i = Math.round(((deg % 360) / 45)) % 8;
+  return dirs[(i + 8) % 8];
+}
+
+// Temperature ramp stops (metric). Linear interpolate between them.
+const RAMP: Array<[number, [number, number, number]]> = [
+  [0, [124, 196, 255]],
+  [10, [110, 231, 183]],
+  [20, [253, 224, 71]],
+  [30, [251, 146, 60]],
+];
+
+export function tempColor(c: number): string {
+  if (c <= RAMP[0][0]) return rgb(RAMP[0][1]);
+  const last = RAMP[RAMP.length - 1];
+  if (c >= last[0]) return rgb(last[1]);
+  for (let i = 0; i < RAMP.length - 1; i++) {
+    const [a, ca] = RAMP[i];
+    const [b, cb] = RAMP[i + 1];
+    if (c >= a && c <= b) {
+      const t = (c - a) / (b - a);
+      return rgb([
+        Math.round(ca[0] + (cb[0] - ca[0]) * t),
+        Math.round(ca[1] + (cb[1] - ca[1]) * t),
+        Math.round(ca[2] + (cb[2] - ca[2]) * t),
+      ]);
     }
+  }
+  return rgb(last[1]);
 }
 
-impl Default for Http {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-fn now_secs() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0)
-}
-
-fn cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path().app_cache_dir().map_err(|e| e.to_string())
-}
-
-fn data_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path().app_data_dir().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub async fn search_city(http: State<'_, Http>, query: String) -> Result<Vec<Location>, String> {
-    let query = query.trim().to_string();
-    if query.chars().count() < 2 {
-        return Ok(Vec::new());
-    }
-    weather::search(&http.0, &query).await
-}
-
-async fn get_cached(app: AppHandle, location: Location) -> Option<WeatherBundle> {
-    let dir = cache_dir(&app).ok()?;
-    store::read_cache(&dir, &location)
-}
-
-#[tauri::command]
-pub async fn get_weather(
-    app: AppHandle,
-    http: State<'_, Http>,
-    location: Location,
-    force: bool,
-) -> Result<WeatherBundle, String> {
-    let cached = get_cached(app.clone(), location.clone()).await;
-
-    if !force {
-        if let Some(bundle) = &cached {
-            if now_secs() - bundle.fetched_at < CACHE_TTL_SECS {
-                return Ok(bundle.clone());
-            }
-        }
-    }
-
-    match weather::fetch_bundle(&http.0, &location).await {
-        Ok(bundle) => {
-            if let Ok(dir) = cache_dir(&app) {
-                store::write_cache(&dir, &bundle);
-            }
-            Ok(bundle)
-        }
-        Err(e) => match cached {
-            Some(mut bundle) => {
-                bundle.stale = true;
-                Ok(bundle)
-            }
-            None => Err(e),
-        },
-    }
-}
-
-#[tauri::command]
-pub fn get_saved(app: AppHandle) -> Vec<Location> {
-    data_dir(&app)
-        .map(|dir| store::read_saved(&dir))
-        .unwrap_or_default()
-}
-
-fn same_place(a: &Location, lat: f64, lon: f64) -> bool {
-    (a.latitude * 100.0).round() == (lat * 100.0).round()
-        && (a.longitude * 100.0).round() == (lon * 100.0).round()
-}
-
-#[tauri::command]
-pub fn save_location(app: AppHandle, location: Location) -> Result<Vec<Location>, String> {
-    let dir = data_dir(&app)?;
-    let mut list = store::read_saved(&dir);
-    if !list
-        .iter()
-        .any(|l| same_place(l, location.latitude, location.longitude))
-    {
-        list.push(location);
-        store::write_saved(&dir, &list)?;
-    }
-    Ok(list)
-}
-
-#[tauri::command]
-pub fn remove_location(
-    app: AppHandle,
-    latitude: f64,
-    longitude: f64,
-) -> Result<Vec<Location>, String> {
-    let dir = data_dir(&app)?;
-    let mut list = store::read_saved(&dir);
-    list.retain(|l| !same_place(l, latitude, longitude));
-    store::write_saved(&dir, &list)?;
-    Ok(list)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::same_place;
-    use crate::weather::Location;
-
-    #[test]
-    fn dedupes_on_rounded_coords() {
-        let loc = Location {
-            name: "London".into(),
-            country: "United Kingdom".into(),
-            admin1: None,
-            latitude: 51.50853,
-            longitude: -0.12574,
-        };
-        assert!(same_place(&loc, 51.5084, -0.1256));
-        assert!(!same_place(&loc, 51.52, -0.12574));
-    }
+function rgb([r, g, b]: [number, number, number]): string {
+  return `rgb(${r}, ${g}, ${b})`;
 }
 === END ===
 
-=== FILE: src-tauri/src/lib.rs ===
-mod commands;
-mod store;
-mod weather;
+=== FILE: src/icons.ts
+import type { Kind } from "./theme";
 
-use commands::Http;
+export type IconName =
+  | "clear-day"
+  | "clear-night"
+  | "partly-day"
+  | "partly-night"
+  | "cloudy"
+  | "fog"
+  | "drizzle"
+  | "rain"
+  | "snow"
+  | "storm"
+  | "sun"
+  | "moon"
+  | "wind"
+  | "drop"
+  | "eye"
+  | "gauge"
+  | "thermo"
+  | "uv"
+  | "sunrise"
+  | "sunset"
+  | "leaf"
+  | "search"
+  | "menu"
+  | "plus"
+  | "close"
+  | "refresh"
+  | "cog";
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .manage(Http::new())
-        .invoke_handler(tauri::generate_handler![
-            commands::search_city,
-            commands::get_weather,
-            commands::get_saved,
-            commands::save_location,
-            commands::remove_location,
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+const ATTR =
+  'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+const SOFT = 'fill="currentColor" fill-opacity=".18"';
+
+const PATHS: Record<IconName, string> = {
+  "clear-day": `<circle cx="12" cy="12" r="4" ${SOFT}/><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>`,
+  "clear-night": `<path d="M20 14a8 8 0 0 1-10-10 8 8 0 1 0 10 10Z" ${SOFT}/><path d="M20 14a8 8 0 0 1-10-10 8 8 0 1 0 10 10Z"/>`,
+  "partly-day": `<circle cx="8" cy="8" r="3" ${SOFT}/><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M2 8h1.5M3.6 3.6l1 1"/><path d="M17 18h-8a3 3 0 0 1 0-6 4 4 0 0 1 7.5 1.2A2.8 2.8 0 0 1 17 18Z" ${SOFT}/><path d="M17 18h-8a3 3 0 0 1 0-6 4 4 0 0 1 7.5 1.2A2.8 2.8 0 0 1 17 18Z"/>`,
+  "partly-night": `<path d="M15 8a5 5 0 0 1-6-6 5 5 0 1 0 6 6Z" ${SOFT}/><path d="M15 8a5 5 0 0 1-6-6 5 5 0 1 0 6 6Z"/><path d="M17 18h-8a3 3 0 0 1 0-6 4 4 0 0 1 7.5 1.2A2.8 2.8 0 0 1 17 18Z"/>`,
+  cloudy: `<path d="M7 18h10a4 4 0 0 0 .5-8A5.5 5.5 0 0 0 7 11a3.5 3.5 0 0 0 0 7Z" ${SOFT}/><path d="M7 18h10a4 4 0 0 0 .5-8A5.5 5.5 0 0 0 7 11a3.5 3.5 0 0 0 0 7Z"/>`,
+  fog: `<path d="M6 10h10a3 3 0 0 0 0-6 4.5 4.5 0 0 0-8.7 1" ${SOFT}/><path d="M6 10h10a3 3 0 0 0 0-6 4.5 4.5 0 0 0-8.7 1"/><path d="M4 14h16M4 18h16"/>`,
+  drizzle: `<path d="M7 13h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 7 3 3 0 0 0 7 13Z" ${SOFT}/><path d="M7 13h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 7 3 3 0 0 0 7 13Z"/><path d="M8 16l-1 2M12 16l-1 2M16 16l-1 2"/>`,
+  rain: `<path d="M7 13h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 7 3 3 0 0 0 7 13Z" ${SOFT}/><path d="M7 13h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 7 3 3 0 0 0 7 13Z"/><path d="M8 16v3M12 16v3M16 16v3"/>`,
+  snow: `<path d="M7 13h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 7 3 3 0 0 0 7 13Z" ${SOFT}/><path d="M7 13h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 7 3 3 0 0 0 7 13Z"/><path d="M8 16v3M12 16v3M16 16v3M7 17l2 1M11 17l2 1M15 17l2 1"/>`,
+  storm: `<path d="M7 12h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 6 3 3 0 0 0 7 12Z" ${SOFT}/><path d="M7 12h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 6 3 3 0 0 0 7 12Z"/><path d="M13 14l-3 4h3l-2 4"/>`,
+  sun: `<circle cx="12" cy="12" r="4" ${SOFT}/><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>`,
+  moon: `<path d="M20 14a8 8 0 0 1-10-10 8 8 0 1 0 10 10Z" ${SOFT}/><path d="M20 14a8 8 0 0 1-10-10 8 8 0 1 0 10 10Z"/>`,
+  wind: `<path d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7"/>`,
+  drop: `<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z" ${SOFT}/><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z"/>`,
+  eye: `<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/>`,
+  gauge: `<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 14l4-4"/>`,
+  thermo: `<path d="M12 4a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0V4Z" transform="translate(-2 0)"/>`,
+  uv: `<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2 2M17.1 17.1l2 2M19.1 4.9l-2 2M6.9 17.1l-2 2"/>`,
+  sunrise: `<path d="M3 18h18M6 14a6 6 0 0 1 12 0M12 3v5M9 6l3-3 3 3"/>`,
+  sunset: `<path d="M3 18h18M6 14a6 6 0 0 1 12 0M12 3v5M9 5l3 3 3-3"/>`,
+  leaf: `<path d="M5 19c0-8 6-13 14-13 0 8-6 13-14 13Z" ${SOFT}/><path d="M5 19c0-8 6-13 14-13 0 8-6 13-14 13Z"/><path d="M5 19c3-3 6-6 10-8"/>`,
+  search: `<circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/>`,
+  menu: `<path d="M4 6h16M4 12h16M4 18h16"/>`,
+  plus: `<path d="M12 5v14M5 12h14"/>`,
+  close: `<path d="M6 6l12 12M18 6L6 18"/>`,
+  refresh: `<path d="M20 11a8 8 0 0 0-14-4l-2 2M4 5v4h4M4 13a8 8 0 0 0 14 4l2-2M20 19v-4h-4"/>`,
+  cog: `<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2 2M17.1 17.1l2 2M19.1 4.9l-2 2M6.9 17.1l-2 2"/>`,
+};
+
+export function icon(name: IconName, size = 24): string {
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" ${ATTR} aria-hidden="true">${PATHS[name]}</svg>`;
 }
+
+export function conditionIcon(kind: Kind, isDay: boolean, size = 24): string {
+  switch (kind) {
+    case "clear":
+      return icon(isDay ? "clear-day" : "clear-night", size);
+    case "partly":
+      return icon(isDay ? "partly-day" : "partly-night", size);
+    case "cloudy":
+      return icon("cloudy", size);
+    case "fog":
+      return icon("fog", size);
+    case "drizzle":
+      return icon("drizzle", size);
+    case "rain":
+      return icon("rain", size);
+    case "snow":
+      return icon("snow", size);
+    case "storm":
+      return icon("storm", size);
+  }
+}
+=== END ===
+
+=== FILE: src/state.ts ===
+import type { Location, Settings, WeatherBundle } from "./types";
+import { loadSettings } from "./format";
+
+export interface State {
+  settings: Settings;
+  saved: Location[];
+  current: Location | null;
+  bundle: WeatherBundle | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export const state: State = {
+  settings: loadSettings(),
+  saved: [],
+  current: null,
+  bundle: null,
+  loading: false,
+  error: null,
+};
+
+type Listener = (s: State) => void;
+const listeners: Listener[] = [];
+
+export function subscribe(fn: Listener): void {
+  listeners.push(fn);
+}
+
+export function set(partial: Partial<State>): void {
+  Object.assign(state, partial);
+  for (const fn of listeners) fn(state);
+}
+=== END ===
+
+=== FILE: src/ui/hero.ts ===
+import type { Settings, WeatherBundle } from "../types";
+import { describe, skyGradient } from "../theme";
+import { clock, esc, hourLabel, temp, tempDeg } from "../format";
+import { conditionIcon } from "../icons";
+
+export function renderHero(b: WeatherBundle, s: Settings): HTMLElement {
+  const c = b.current;
+  const cond = describe(c.weatherCode, c.isDay);
+  const today = b.daily[0];
+
+  const location = esc(b.location.name);
+  const sub = [b.location.admin1, b.location.country].filter(Boolean).map((x) => esc(x as string)).join(", ");
+
+  let summary = `Feels like ${tempDeg(c.apparent, s)}.`;
+  const wetHour = b.hourly.find((h) => (h.precipitationProbability ?? 0) >= 40);
+  if (wetHour) summary += ` Rain likely around ${hourLabel(wetHour.time, s)}.`;
+
+  const stale = b.stale
+    ? `<div class="pill">Offline, showing saved data</div>`
+    : "";
+
+  const hl = today
+    ? `H ${temp(today.tempMax, s)}&deg;&nbsp;&nbsp;L ${temp(today.tempMin, s)}&deg;`
+    : "";
+
+  const wrap = document.createElement("section");
+  wrap.className = "hero";
+  wrap.dataset.sky = skyGradient(cond.kind, c.isDay);
+  wrap.innerHTML = `
+    <div class="hero-city">${location}${sub ? `<small>${sub}</small>` : ""}</div>
+    <div class="hero-temp">${temp(c.temperature, s)}<sup>&deg;</sup></div>
+    <div class="hero-cond">${conditionIcon(cond.kind, c.isDay, 20)} ${esc(cond.label)}</div>
+    <div class="hero-hl">${hl}</div>
+    <div class="hero-summary">${esc(summary)}</div>
+    ${stale}
+  `;
+  // ensure the icon doesn't break the flow (keep it inline)
+  const condEl = wrap.querySelector(".hero-cond");
+  if (condEl) condEl.innerHTML = condEl.innerHTML;
+  return wrap;
+}
+
+/** Exposed for potential callers that need the local time string. */
+export function localClock(iso: string, s: Settings): string {
+  return clock(iso, s);
+}
+=== END ===
+
+=== FILE: src/ui/hourly.ts ===
+import type { Settings, WeatherBundle } from "../types";
+import { describe } from "../theme";
+import { hourLabel, temp } from "../format";
+import { conditionIcon } from "../icons";
+
+const COL_W = 56;
+const GAP = 4;
+const SPARK_TOP = 24; // aligns roughly with temperature row inside the column
+const SPARK_H = 40;
+
+export function renderHourly(b: WeatherBundle, s: Settings): HTMLElement {
+  const hours = b.hourly.slice(0, 24);
+  const card = document.createElement("section");
+  card.className = "card";
+
+  const title = document.createElement("h2");
+  title.className = "card-title";
+  title.textContent = "HOURLY FORECAST";
+  card.appendChild(title);
+
+  const scroll = document.createElement("div");
+  scroll.className = "hourly-scroll";
+
+  // Sparkline sized to content width.
+  const contentW = hours.length * (COL_W + GAP) - GAP;
+  const svg = sparkline(hours.map((h) => h.temperature));
+
+  for (let i = 0; i < hours.length; i++) {
+    const h = hours[i];
+    const cond = describe(h.weatherCode, h.isDay);
+    const col = document.createElement("div");
+    col.className = "hour-col" + (i === 0 ? " is-now" : "");
+    const label = i === 0 ? "Now" : hourLabel(h.time, s);
+    const rain = (h.precipitationProbability ?? 0) >= 20
+      ? `<div class="hour-rain">${h.precipitationProbability}%</div>`
+      : `<div class="hour-rain"></div>`;
+    col.innerHTML = `
+      <div class="hour-label">${label}</div>
+      ${conditionIcon(cond.kind, h.isDay, 22)}
+      <div class="hour-temp">${temp(h.temperature, s)}&deg;</div>
+      ${rain}
+    `;
+    scroll.appendChild(col);
+  }
+
+  // Insert sparkline absolutely positioned behind temps.
+  const svgWrap = document.createElement("div");
+  svgWrap.className = "hourly-spark";
+  svgWrap.style.width = `${contentW}px`;
+  svgWrap.style.height = `${SPARK_H}px`;
+  svgWrap.innerHTML = svg;
+  scroll.insertBefore(svgWrap, scroll.firstChild);
+
+  card.appendChild(scroll);
+  return card;
+}
+
+function sparkline(values: number[]): string {
+  const n = values.length;
+  if (n === 0) return "";
+  const w = n * (COL_W + GAP) - GAP;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const pad = 6;
+  const h = SPARK_H;
+  const pts = values.map((v, i) => {
+    const x = i * (COL_W + GAP) + COL_W / 2;
+    const y = pad + (1 - (v - min) / span) * (h - pad * 2);
+    return [x, y] as const;
+  });
+
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[i + 1];
+    const cx = (x0 + x1) / 2;
+    d += ` C ${cx} ${y0}, ${cx} ${y1}, ${x1} ${y1}`;
+  }
+
+  const dots = pts
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="rgba(255,255,255,.75)"/>`)
+    .join("");
+
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" aria-hidden="true">
+    <path d="${d}" stroke="rgba(255,255,255,.55)" stroke-width="2" fill="none" stroke-linecap="round"/>
+    ${dots}
+  </svg>`;
+}
+
+/** keeps sparkline vertical position consistent */
+export const HOURLY_SPARK_TOP = SPARK_TOP;
+=== END ===
+
+=== FILE: src/ui/daily.ts ===
+import type { Settings, WeatherBundle } from "../types";
+import { describe } from "../theme";
+import { dayName, temp, tempColor } from "../format";
+import { conditionIcon } from "../icons";
+
+export function renderDaily(b: WeatherBundle, s: Settings): HTMLElement {
+  const days = b.daily.slice(0, 10);
+  const card = document.createElement("section");
+  card.className = "card daily";
+
+  const title = document.createElement("h2");
+  title.className = "card-title";
+  title.textContent = "10-DAY FORECAST";
+  card.appendChild(title);
+
+  const gmins = days.map((d) => d.tempMin);
+  const gmaxs = days.map((d) => d.tempMax);
+  const lo = Math.min(...gmins);
+  const hi = Math.max(...gmaxs);
+  const span = hi - lo || 1;
+
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
+    const cond = describe(d.weatherCode, true);
+    const row = document.createElement("div");
+    row.className = "daily-row";
+
+    const left = ((d.tempMin - lo) / span) * 100;
+    const width = ((d.tempMax - d.tempMin) / span) * 100;
+    const fill = `background:linear-gradient(90deg, ${tempColor(d.tempMin)}, ${tempColor(d.tempMax)});left:${left}%;width:${width}%`;
+
+    const rain = (d.precipitationProbabilityMax ?? 0) >= 20
+      ? `<div class="daily-rain">${d.precipitationProbabilityMax}%</div>`
+      : `<div></div>`;
+
+    row.innerHTML = `
+      <div class="daily-day">${dayName(d.date, i)}</div>
+      <div>${conditionIcon(cond.kind, true, 22)}</div>
+      ${rain}
+      <div class="daily-min">${temp(d.tempMin, s)}&deg;</div>
+      <div class="daily-bar"><div class="daily-bar-fill" style="${fill}"></div></div>
+      <div class="daily-max">${temp(d.tempMax, s)}&deg;</div>
+    `;
+    card.appendChild(row);
+  }
+
+  return card;
+}
+=== END ===
+
+=== FILE: src/main.ts ===
+import "./styles.css";
+import type { Location, WeatherBundle } from "./types";
+import { describe, skyGradient } from "./theme";
+import { getCached, getSaved, getWeather, saveLocation } from "./api";
+import { state, set } from "./state";
+import { renderHero } from "./ui/hero";
+import { renderHourly } from "./ui/hourly";
+import { renderDaily } from "./ui/daily";
+
+const DEFAULT: Location = {
+  name: "Berlin",
+  country: "Germany",
+  admin1: "Berlin",
+  latitude: 52.52,
+  longitude: 13.405,
+};
+
+let skyFront = 0;
+let skyEls: HTMLDivElement[] = [];
+
+function setupShell(): { main: HTMLElement } {
+  const app = document.getElementById("app");
+  if (!app) throw new Error("missing #app");
+
+  const sky = document.createElement("div");
+  sky.className = "sky";
+  skyEls = [0, 1].map(() => {
+    const l = document.createElement("div");
+    l.className = "sky-layer";
+    sky.appendChild(l);
+    return l;
+  });
+
+  const sidebar = document.createElement("aside");
+  sidebar.id = "sidebar";
+  sidebar.className = "sidebar";
+
+  const main = document.createElement("main");
+  main.id = "main";
+
+  app.replaceChildren(sky, sidebar, main);
+  return { main };
+}
+
+function applySky(bundle: WeatherBundle): void {
+  const c = bundle.current;
+  const cond = describe(c.weatherCode, c.isDay);
+  const grad = skyGradient(cond.kind, c.isDay);
+  const back = skyEls[1 - skyFront];
+  const front = skyEls[skyFront];
+  if (front.style.backgroundImage === grad) return;
+
+  back.style.backgroundImage = grad;
+  // force reflow so the transition triggers
+  void back.offsetWidth;
+  back.classList.add("active");
+  front.classList.remove("active");
+  skyFront = 1 - skyFront;
+}
+
+function renderMain(main: HTMLElement, b: WeatherBundle): void {
+  main.replaceChildren(
+    renderHero(b, state.settings),
+    renderHourly(b, state.settings),
+  );
+  const grid = document.createElement("section");
+  grid.id = "grid";
+  grid.className = "grid";
+  const daily = renderDaily(b, state.settings);
+  daily.classList.add("span-2", "row-2");
+  grid.appendChild(daily);
+  main.appendChild(grid);
+}
+
+function renderPlaceholder(main: HTMLElement, text: string): void {
+  const box = document.createElement("div");
+  box.className = "loading";
+  box.textContent = text;
+  main.replaceChildren(box);
+}
+
+function renderError(main: HTMLElement, retry: () => void): void {
+  const box = document.createElement("div");
+  box.className = "error";
+  const msg = document.createElement("div");
+  msg.textContent = state.error ?? "Something went wrong.";
+  const btn = document.createElement("button");
+  btn.textContent = "Retry";
+  btn.addEventListener("click", retry);
+  box.append(msg, btn);
+  main.replaceChildren(box);
+}
+
+async function load(loc: Location, main: HTMLElement): Promise<void> {
+  set({ current: loc, loading: true, error: null });
+  if (!state.bundle) renderPlaceholder(main, "Loading weather\u2026");
+
+  try {
+    const b = await getWeather(loc, false);
+    set({ bundle: b, loading: false });
+    applySky(b);
+    renderMain(main, b);
+  } catch (err) {
+    set({ loading: false, error: String(err) });
+    renderError(main, () => void load(loc, main));
+  }
+}
+
+async function init(): Promise<void> {
+  const { main } = setupShell();
+
+  let saved: Location[] = [];
+  try {
+    saved = await getSaved();
+  } catch {
+    saved = [];
+  }
+  if (saved.length === 0) {
+    try {
+      saved = await saveLocation(DEFAULT);
+    } catch {
+      saved = [DEFAULT];
+    }
+  }
+  set({ saved });
+  const loc = saved[0] ?? DEFAULT;
+
+  // Show cached data instantly if present.
+  try {
+    const cached = await getCached(loc);
+    if (cached) {
+      set({ bundle: cached, current: loc });
+      applySky(cached);
+      renderMain(main, cached);
+    }
+  } catch {
+    /* no cache */
+  }
+
+  await load(loc, main);
+
+  const refresh = () => {
+    const cur = state.current;
+    if (!cur || state.loading) return;
+    void (async () => {
+      try {
+        const b = await getWeather(cur, false);
+        set({ bundle: b });
+        applySky(b);
+        renderMain(main, b);
+      } catch {
+        /* keep last bundle */
+      }
+    })();
+  };
+
+  setInterval(refresh, 10 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refresh();
+  });
+}
+
+void init();
 === END ===
