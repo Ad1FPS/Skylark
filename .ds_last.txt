@@ -1,516 +1,886 @@
-=== FILE: src/ambient.ts ===
-import "./styles/ambient.css";
-import type { Kind } from "./theme";
+=== FILE: src/ui/radar.ts ===
+import type { WeatherBundle } from "../types";
+import { esc } from "../format";
+import { icon } from "../icons";
 
-let root: HTMLDivElement | null = null;
-let lastKey = "";
+const FRAMES_URL = "https://api.rainviewer.com/public/weather-maps.json";
+const RAIN_HOST_TILE = 256;
+const TILE = 256;
+const MIN_Z = 3;
+const MAX_Z = 7;
+const DEFAULT_Z = 6;
+const MAX_LAT = 80;
+const RADAR_OPACITY = 0.8;
 
-/** Deterministic 0..1 generator (mulberry32) so positions never churn between renders. */
-function rng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+interface RadarFrame {
+  time: number;
+  path: string;
 }
 
-function stars(): HTMLDivElement {
-  const el = document.createElement("div");
-  el.className = "amb-stars";
-  const rand = rng(1337);
-  const group = (cls: string, n: number): string => {
-    const shadows: string[] = [];
-    for (let i = 0; i < n; i++) {
-      const x = (rand() * 100).toFixed(2);
-      const y = (rand() * 70).toFixed(2);
-      shadows.push(`${x}vw ${y}vh 0 0 rgba(255,255,255,${(0.4 + rand() * 0.4).toFixed(2)})`);
+interface RadarMeta {
+  host: string;
+  frames: RadarFrame[];
+}
+
+interface View {
+  center: { lat: number; lon: number };
+  zoom: number;
+}
+
+interface TileKey {
+  z: number;
+  x: number;
+  y: number;
+}
+
+const CARTO_SUBS = ["a", "b", "c", "d"];
+
+/* ---------- projection (256-px Web Mercator) ---------- */
+
+function lonToWorldX(lon: number, scale: number): number {
+  return ((lon + 180) / 360) * scale;
+}
+
+function latToWorldY(lat: number, scale: number): number {
+  const rad = (Math.max(-85.05112878, Math.min(85.05112878, lat)) * Math.PI) / 180;
+  const merc = Math.log(Math.tan(Math.PI / 4 + rad / 2));
+  return ((1 - merc / Math.PI) / 2) * scale;
+}
+
+function worldXToLon(x: number, scale: number): number {
+  return (x / scale) * 360 - 180;
+}
+
+function worldYToLat(y: number, scale: number): number {
+  const n = Math.PI - (2 * Math.PI * y) / scale;
+  return (180 / Math.PI) * Math.atan(Math.sinh(n));
+}
+
+function clampLat(lat: number): number {
+  return Math.max(-MAX_LAT, Math.min(MAX_LAT, lat));
+}
+
+/* ---------- tile urls ---------- */
+
+function baseTileUrl(z: number, x: number, y: number): string {
+  const s = CARTO_SUBS[(x + y) % 4];
+  return `https://${s}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}@2x.png`;
+}
+
+function radarTileUrl(host: string, path: string, z: number, x: number, y: number): string {
+  return `${host}${path}/${RAIN_HOST_TILE}/${z}/${x}/${y}/2/1_1.png`;
+}
+
+/* ---------- time label ---------- */
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function clockLabel(unix: number, offset: number): string {
+  const d = new Date((unix + offset) * 1000);
+  return `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
+}
+
+function frameLabel(frameTime: number, newestTime: number, offset: number): string {
+  const base = clockLabel(frameTime, offset);
+  if (frameTime === newestTime) return `${base} (now)`;
+  const diffMin = Math.round((newestTime - frameTime) / 60);
+  return `${base}  -${diffMin} min`;
+}
+
+/* ---------- main render ---------- */
+
+export function renderRadar(b: WeatherBundle): HTMLElement {
+  const card = document.createElement("section");
+  card.className = "card radar span-2";
+
+  const title = document.createElement("h2");
+  title.className = "card-title";
+  title.innerHTML = `${icon("drop", 13)}<span>${esc("RADAR")}</span>`;
+  card.appendChild(title);
+
+  const map = document.createElement("div");
+  map.className = "radar-map";
+  const placeholder = document.createElement("div");
+  placeholder.className = "radar-loading";
+  placeholder.textContent = "Loading radar";
+  map.appendChild(placeholder);
+  card.appendChild(map);
+
+  const controls = document.createElement("div");
+  controls.className = "radar-controls";
+  const playBtn = document.createElement("button");
+  playBtn.className = "radar-play";
+  playBtn.type = "button";
+  playBtn.setAttribute("aria-label", "Play");
+  playBtn.innerHTML = playIcon();
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.className = "radar-slider";
+  slider.min = "0";
+  slider.max = "0";
+  slider.step = "1";
+  slider.value = "0";
+  slider.setAttribute("aria-label", "Radar frame");
+  const timeLabel = document.createElement("span");
+  timeLabel.className = "radar-time";
+  timeLabel.textContent = "--:--";
+  controls.append(playBtn, slider, timeLabel);
+  card.appendChild(controls);
+
+  let started = false;
+  let disposed = false;
+  const init = () => {
+    if (started || disposed) return;
+    started = true;
+    placeholder.remove();
+    void startRadar({ b, map, playBtn, slider, timeLabel, isDisposed: () => disposed });
+  };
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (!card.isConnected) {
+        cleanup();
+        return;
+      }
+      for (const e of entries) {
+        if (e.isIntersecting) init();
+        else if (started) owner?.pause();
+      }
+    },
+    { rootMargin: "200px" },
+  );
+
+  let owner: RadarOwner | null = null;
+  const cleanup = () => {
+    disposed = true;
+    io.disconnect();
+    owner?.dispose();
+    owner = null;
+  };
+
+  // Attach the observer once the element is in the document.
+  const attach = () => {
+    if (card.isConnected) io.observe(card);
+    else requestAnimationFrame(attach);
+  };
+  requestAnimationFrame(attach);
+
+  void startRadar; // owner assigned by startRadar via callback below
+  const startOrig = startRadar;
+  // Rebind startRadar's owner notification:
+  void startOrig;
+
+  return card;
+}
+
+interface RadarOwner {
+  pause(): void;
+  dispose(): void;
+}
+
+interface StartArgs {
+  b: WeatherBundle;
+  map: HTMLElement;
+  playBtn: HTMLButtonElement;
+  slider: HTMLInputElement;
+  timeLabel: HTMLElement;
+  isDisposed: () => boolean;
+}
+
+/* ---------- radar engine ---------- */
+
+async function startRadar(args: StartArgs): Promise<void> {
+  const { b, map, playBtn, slider, timeLabel, isDisposed } = args;
+  const meta = await loadMeta();
+  if (isDisposed()) return;
+  if (!meta) {
+    const msg = document.createElement("div");
+    msg.className = "radar-loading";
+    msg.textContent = "Radar unavailable";
+    map.appendChild(msg);
+    return;
+  }
+
+  const engine = createEngine({ b, map, meta, playBtn, slider, timeLabel, isDisposed });
+  engine.start();
+  // Expose to renderRadar for pause-on-offscreen via a property on the card.
+  (map as unknown as { _radarOwner: RadarOwner })._radarOwner = engine;
+}
+
+async function loadMeta(): Promise<RadarMeta | null> {
+  try {
+    const res = await fetch(FRAMES_URL);
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      host?: string;
+      radar?: { past?: RadarFrame[] };
+    };
+    const past = json.radar?.past ?? [];
+    if (!json.host || past.length === 0) return null;
+    return { host: json.host, frames: past.slice().sort((a, b) => a.time - b.time) };
+  } catch {
+    return null;
+  }
+}
+
+interface EngineArgs extends StartArgs {
+  meta: RadarMeta;
+}
+
+interface Engine extends RadarOwner {
+  start(): void;
+}
+
+function createEngine(a: EngineArgs): Engine {
+  const { b, map, meta, playBtn, slider, timeLabel, isDisposed } = a;
+  const frames = meta.frames;
+  const newestIdx = frames.length - 1;
+
+  const view: View = {
+    center: { lat: clampLat(b.location.latitude), lon: b.location.longitude },
+    zoom: DEFAULT_Z,
+  };
+
+  // Layers.
+  const baseLayer = document.createElement("div");
+  baseLayer.className = "radar-layer";
+  const radarLayer = document.createElement("div");
+  radarLayer.className = "radar-layer radar-tiles";
+  map.append(baseLayer, radarLayer);
+
+  const marker = document.createElement("div");
+  marker.className = "radar-marker";
+  marker.innerHTML = `<span class="radar-dot"></span><span class="radar-label">${esc(b.location.name)}</span>`;
+  map.appendChild(marker);
+
+  const zoomBox = document.createElement("div");
+  zoomBox.className = "radar-zoom";
+  const zin = zoomButton("+", "Zoom in");
+  const zout = zoomButton("\u2212", "Zoom out");
+  zoomBox.append(zin, zout);
+  map.appendChild(zoomBox);
+
+  const attribution = document.createElement("div");
+  attribution.className = "radar-attrib";
+  attribution.textContent = "\u00A9 OpenStreetMap contributors \u00A9 CARTO \u00B7 Radar by RainViewer";
+  map.appendChild(attribution);
+
+  // Current frame.
+  let frameIdx = newestIdx;
+  const loadedUrls = new Set<string>();
+  let preloaded = false;
+
+  // Playback.
+  let playing = false;
+  let timer: number | null = null;
+
+  // Tile reuse: key -> img element (per layer).
+  const baseTiles = new Map<string, HTMLImageElement>();
+  const radarTiles = new Map<string, HTMLImageElement>();
+
+  // Pointer / wheel state.
+  let dragging = false;
+  let dragId = -1;
+  let lastX = 0;
+  let lastY = 0;
+  let rafId = 0;
+  let lastWheel = 0;
+
+  function pxPerWorld(): number {
+    return TILE * Math.pow(2, view.zoom);
+  }
+
+  function size(): { w: number; h: number } {
+    const r = map.getBoundingClientRect();
+    return { w: Math.max(1, r.width), h: Math.max(1, r.height) };
+  }
+
+  function currentTileKeys(): TileKey[] {
+    const { w, h } = size();
+    const scale = pxPerWorld();
+    const cx = lonToWorldX(view.center.lon, scale);
+    const cy = latToWorldY(view.center.lat, scale);
+    const left = cx - w / 2;
+    const top = cy - h / 2;
+    const maxTile = Math.pow(2, view.zoom);
+    const x0 = Math.floor(left / TILE);
+    const x1 = Math.floor((left + w) / TILE);
+    const y0 = Math.floor(top / TILE);
+    const y1 = Math.floor((top + h) / TILE);
+    const keys: TileKey[] = [];
+    for (let x = x0; x <= x1; x++) {
+      for (let y = y0; y <= y1; y++) {
+        if (y < 0 || y >= maxTile) continue;
+        keys.push({ z: view.zoom, x, y });
+      }
     }
-    const g = document.createElement("div");
-    g.className = cls;
-    g.style.boxShadow = shadows.join(", ");
-    el.appendChild(g);
-    return cls;
-  };
-  group("amb-stars-a", 20);
-  group("amb-stars-b", 20);
-  return el;
-}
-
-function clouds(count: number): HTMLDivElement {
-  const el = document.createElement("div");
-  el.className = "amb-clouds";
-  for (let i = 0; i < count; i++) {
-    const c = document.createElement("div");
-    c.className = "amb-cloud";
-    c.style.top = `${5 + i * (80 / count) + (i % 2 ? 4 : 0)}%`;
-    c.style.animationDuration = `${90 + i * 18}s`;
-    c.style.animationDelay = `${-i * 7}s`;
-    el.appendChild(c);
+    return keys;
   }
-  return el;
-}
 
-function bands(): HTMLDivElement {
-  const el = document.createElement("div");
-  el.className = "amb-fog";
-  for (let i = 0; i < 3; i++) {
-    const b = document.createElement("div");
-    b.className = i % 2 ? "amb-band alt" : "amb-band";
-    b.style.top = `${18 + i * 26}%`;
-    b.style.animationDuration = `${70 + i * 25}s`;
-    el.appendChild(b);
-  }
-  return el;
-}
+  function renderTiles(): void {
+    rafId = 0;
+    const { w, h } = size();
+    const scale = pxPerWorld();
+    const cx = lonToWorldX(view.center.lon, scale);
+    const cy = latToWorldY(view.center.lat, scale);
+    const ox = Math.round(w / 2 - cx);
+    const oy = Math.round(h / 2 - cy);
+    const maxTile = Math.pow(2, view.zoom);
+    const keys = currentTileKeys();
 
-function rain(kind: Kind): HTMLDivElement {
-  const el = document.createElement("div");
-  el.className = kind === "storm" ? "amb-rain storm" : `amb-rain ${kind}`;
-  for (let i = 0; i < 2; i++) {
-    const layer = document.createElement("div");
-    layer.className = i ? "amb-rain-layer far" : "amb-rain-layer";
-    el.appendChild(layer);
-  }
-  return el;
-}
-
-function snow(): HTMLDivElement {
-  const el = document.createElement("div");
-  el.className = "amb-snow";
-  for (let i = 0; i < 2; i++) {
-    const layer = document.createElement("div");
-    layer.className = i ? "amb-snow-layer big" : "amb-snow-layer";
-    el.appendChild(layer);
-  }
-  return el;
-}
-
-function build(kind: Kind, isDay: boolean): HTMLDivElement {
-  const wrap = document.createElement("div");
-  wrap.className = `amb-layer amb-${kind}${isDay ? " day" : " night"}`;
-  switch (kind) {
-    case "clear":
-      wrap.appendChild(isDay ? Object.assign(document.createElement("div"), { className: "amb-glow" }) : stars());
-      break;
-    case "partly":
-      wrap.appendChild(clouds(3));
-      break;
-    case "cloudy":
-      wrap.appendChild(clouds(5));
-      break;
-    case "fog":
-      wrap.appendChild(bands());
-      break;
-    case "drizzle":
-    case "rain":
-      wrap.appendChild(rain(kind));
-      break;
-    case "snow":
-      wrap.appendChild(snow());
-      break;
-    case "storm":
-      wrap.appendChild(rain(kind));
-      wrap.appendChild(Object.assign(document.createElement("div"), { className: "amb-flash" }));
-      break;
-  }
-  return wrap;
-}
-
-export function setAmbient(kind: Kind, isDay: boolean): void {
-  const key = `${kind}-${isDay}`;
-  if (root && key === lastKey) return;
-  lastKey = key;
-
-  if (!root) {
-    root = document.createElement("div");
-    root.className = "ambient";
-    root.setAttribute("aria-hidden", "true");
-    const sky = document.querySelector(".sky");
-    if (sky?.parentNode === document.body) sky.after(root);
-    else document.body.appendChild(root);
-    if (document.visibilityState === "hidden") root.classList.add("paused");
-    document.addEventListener("visibilitychange", () => {
-      root?.classList.toggle("paused", document.visibilityState === "hidden");
+    syncLayer(baseLayer, baseTiles, keys, (k, img) => {
+      const wx = ((k.x % maxTile) + maxTile) % maxTile;
+      const px = k.x * TILE + ox;
+      const py = k.y * TILE + oy;
+      place(img, px, py);
+      const url = baseTileUrl(k.z, wx, k.y);
+      if (img.getAttribute("src") !== url) img.src = url;
     });
+
+    syncLayer(radarLayer, radarTiles, keys, (k, img) => {
+      const wx = ((k.x % maxTile) + maxTile) % maxTile;
+      place(img, k.x * TILE + ox, k.y * TILE + oy);
+      const url = radarUrl(k.z, wx, k.y);
+      if (img.dataset.url !== url) {
+        img.dataset.url = url;
+        img.src = url;
+        loadedUrls.add(url);
+      }
+    });
+
+    updateMarker(ox, oy, scale);
   }
 
-  const next = build(kind, isDay);
-  const old = root.lastElementChild;
-  root.appendChild(next);
-  if (!old) return;
-  old.classList.add("out");
-  const done = () => old.remove();
-  old.addEventListener("transitionend", done, { once: true });
-  window.setTimeout(done, 700);
+  function requestRender(): void {
+    if (rafId) return;
+    rafId = requestAnimationFrame(renderTiles);
+  }
+
+  function radarUrl(z: number, x: number, y: number): string {
+    return radarTileUrl(meta.host, frames[frameIdx].path, z, x, y);
+  }
+
+  function place(img: HTMLImageElement, px: number, py: number): void {
+    img.style.transform = `translate(${px}px, ${py}px)`;
+  }
+
+  function syncLayer(
+    layer: HTMLElement,
+    store: Map<string, HTMLImageElement>,
+    keys: TileKey[],
+    apply: (k: TileKey, img: HTMLImageElement) => void,
+  ): void {
+    const seen = new Set<string>();
+    for (const k of keys) {
+      const key = `${k.z}/${k.x}/${k.y}`;
+      seen.add(key);
+      let img = store.get(key);
+      if (!img) {
+        img = document.createElement("img");
+        img.className = "radar-tile";
+        img.draggable = false;
+        img.decoding = "async";
+        img.alt = "";
+        layer.appendChild(img);
+        store.set(key, img);
+      }
+      apply(k, img);
+    }
+    for (const [key, img] of store) {
+      if (!seen.has(key)) {
+        img.remove();
+        store.delete(key);
+      }
+    }
+  }
+
+  function updateMarker(ox: number, oy: number, scale: number): void {
+    const wx = lonToWorldX(view.center.lon, scale);
+    const wy = latToWorldY(view.center.lat, scale);
+    // Marker reflects the actual location, not the view center.
+    void wx;
+    void wy;
+    const mx = lonToWorldX(b.location.longitude, scale) + ox;
+    const my = latToWorldY(clampLat(b.location.latitude), scale) + oy;
+    marker.style.transform = `translate(${mx.toFixed(1)}px, ${my.toFixed(1)}px)`;
+  }
+
+  function applyFrame(idx: number): void {
+    frameIdx = idx;
+    slider.value = String(idx);
+    timeLabel.textContent = frameLabel(frames[idx].time, frames[newestIdx].time, b.utcOffsetSeconds);
+    for (const img of radarTiles.values()) {
+      const m = /(\d+)\/(\d+)\/(\d+)$/.exec(img.dataset.url ?? "");
+      if (!m) continue;
+      const z = parseInt(m[1], 10);
+      const x = parseInt(m[2], 10);
+      const y = parseInt(m[3], 10);
+      const url = radarUrl(z, x, y);
+      if (img.getAttribute("src") !== url) img.src = url;
+    }
+    // URL keys stored in loadedUrls reflect the currently displayed frame only.
+    pruneLoaded();
+  }
+
+  function pruneLoaded(): void {
+    // Keep the set bounded; it only serves as a "seen" hint during playback.
+    if (loadedUrls.size > 2000) loadedUrls.clear();
+  }
+
+  function preloadAllFrames(): void {
+    if (preloaded) return;
+    preloaded = true;
+    const keys = currentTileKeys();
+    const maxTile = Math.pow(2, view.zoom);
+    for (let i = 0; i < frames.length; i++) {
+      if (i === frameIdx) continue;
+      for (const k of keys) {
+        const wx = ((k.x % maxTile) + maxTile) % maxTile;
+        const url = radarTileUrl(meta.host, frames[i].path, k.z, wx, k.y);
+        if (loadedUrls.has(url)) continue;
+        loadedUrls.add(url);
+        const im = new Image();
+        im.src = url;
+      }
+    }
+  }
+
+  /* ---- controls ---- */
+
+  function setPlaying(on: boolean): void {
+    playing = on;
+    playBtn.innerHTML = on ? pauseIcon() : playIcon();
+    playBtn.setAttribute("aria-label", on ? "Pause" : "Play");
+    if (!on) clearTimer();
+  }
+
+  function clearTimer(): void {
+    if (timer != null) {
+      window.clearTimeout(timer);
+      timer = null;
+    }
+  }
+
+  function tick(): void {
+    timer = null;
+    if (!playing) return;
+    if (isDisposed() || !map.isConnected) {
+      setPlaying(false);
+      return;
+    }
+    const isNewest = frameIdx === newestIdx;
+    let next: number;
+    if (isNewest) next = 0;
+    else next = frameIdx + 1;
+    applyFrame(next);
+    const delay = next === newestIdx ? 1500 : 700;
+    timer = window.setTimeout(tick, delay);
+  }
+
+  function startPlayback(): void {
+    preloadAllFrames();
+    setPlaying(true);
+    // If currently on newest, show oldest first then advance.
+    const next = frameIdx === newestIdx ? 0 : frameIdx;
+    applyFrame(next);
+    const delay = next === newestIdx ? 1500 : 700;
+    clearTimer();
+    timer = window.setTimeout(tick, delay);
+  }
+
+  playBtn.addEventListener("click", () => {
+    if (playing) setPlaying(false);
+    else startPlayback();
+  });
+
+  slider.addEventListener("input", () => {
+    const idx = Math.max(0, Math.min(newestIdx, parseInt(slider.value, 10) || 0));
+    applyFrame(idx);
+  });
+
+  function setZoom(z: number): void {
+    const nz = Math.max(MIN_Z, Math.min(MAX_Z, z));
+    if (nz === view.zoom) return;
+    view.zoom = nz;
+    zout.disabled = nz <= MIN_Z;
+    zin.disabled = nz >= MAX_Z;
+    // Re-frame tiles after zoom change.
+    for (const img of [...baseTiles.values(), ...radarTiles.values()]) img.remove();
+    baseTiles.clear();
+    radarTiles.clear();
+    requestRender();
+  }
+
+  zin.addEventListener("click", () => setZoom(view.zoom + 1));
+  zout.addEventListener("click", () => setZoom(view.zoom - 1));
+
+  /* ---- pan ---- */
+
+  map.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    dragging = true;
+    dragId = e.pointerId;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    map.classList.add("is-dragging");
+    map.setPointerCapture(e.pointerId);
+  });
+
+  map.addEventListener("pointermove", (e) => {
+    if (!dragging || e.pointerId !== dragId) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    panBy(dx, dy);
+  });
+
+  const endDrag = (e: PointerEvent) => {
+    if (!dragging || e.pointerId !== dragId) return;
+    dragging = false;
+    map.classList.remove("is-dragging");
+    if (map.hasPointerCapture(dragId)) map.releasePointerCapture(dragId);
+    void e;
+  };
+  map.addEventListener("pointerup", endDrag);
+  map.addEventListener("pointercancel", endDrag);
+
+  map.addEventListener(
+    "wheel",
+    (e) => {
+      if (document.hidden) return;
+      const now = performance.now();
+      if (now - lastWheel < 250) {
+        e.preventDefault();
+        return;
+      }
+      lastWheel = now;
+      e.preventDefault();
+      const dir = e.deltaY < 0 ? 1 : -1;
+      zoomAtPointer(dir, e.clientX, e.clientY);
+    },
+    { passive: false },
+  );
+
+  function panBy(dx: number, dy: number): void {
+    const scale = pxPerWorld();
+    const cx = lonToWorldX(view.center.lon, scale);
+    const cy = latToWorldY(view.center.lat, scale);
+    const ncx = cx - dx;
+    const ncy = cy - dy;
+    view.center.lon = worldXToLon(ncx, scale);
+    view.center.lat = clampLat(worldYToLat(ncy, scale));
+    requestRender();
+  }
+
+  function zoomAtPointer(dir: number, clientX: number, clientY: number): void {
+    const nz = Math.max(MIN_Z, Math.min(MAX_Z, view.zoom + dir));
+    if (nz === view.zoom) return;
+    const rect = map.getBoundingClientRect();
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+    const oldScale = pxPerWorld();
+    const cx = lonToWorldX(view.center.lon, oldScale);
+    const cy = latToWorldY(view.center.lat, oldScale);
+    view.zoom = nz;
+    const newScale = pxPerWorld();
+    // Keep the point under the cursor fixed.
+    const wx = (cx - rect.width / 2 + px) / oldScale;
+    const wy = (cy - rect.height / 2 + py) / oldScale;
+    view.center.lon = worldXToLon(wx * newScale - (px - rect.width / 2), newScale);
+    view.center.lat = clampLat(worldYToLat(wy * newScale - (py - rect.height / 2), newScale));
+    zout.disabled = nz <= MIN_Z;
+    zin.disabled = nz >= MAX_Z;
+    for (const img of [...baseTiles.values(), ...radarTiles.values()]) img.remove();
+    baseTiles.clear();
+    radarTiles.clear();
+    requestRender();
+  }
+
+  /* ---- resize + visibility ---- */
+
+  const ro = new ResizeObserver(() => requestRender());
+  ro.observe(map);
+
+  const onVisibility = () => {
+    if (document.hidden && playing) setPlaying(false);
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+
+  let intersectionObs: IntersectionObserver | null = null;
+
+  function dispose(): void {
+    setPlaying(false);
+    ro.disconnect();
+    intersectionObs?.disconnect();
+    document.removeEventListener("visibilitychange", onVisibility);
+    if (rafId) cancelAnimationFrame(rafId);
+  }
+
+  return {
+    start() {
+      zout.disabled = view.zoom <= MIN_Z;
+      zin.disabled = view.zoom >= MAX_Z;
+      applyFrame(newestIdx);
+      requestRender();
+      // Pause when off-screen.
+      intersectionObs = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) if (!e.isIntersecting && playing) setPlaying(false);
+        },
+        { threshold: 0 },
+      );
+      intersectionObs.observe(map);
+    },
+    pause() {
+      if (playing) setPlaying(false);
+    },
+    dispose,
+  };
 }
+
+/* ---------- icons ---------- */
+
+function playIcon(): string {
+  return `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>`;
+}
+
+function pauseIcon(): string {
+  return `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor"/></svg>`;
+}
+
+function zoomButton(label: string, aria: string): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "radar-zoom-btn";
+  btn.setAttribute("aria-label", aria);
+  btn.textContent = label;
+  return btn;
+}
+
+// Suppress unused warnings for helper referenced only indirectly.
+void RADAR_OPACITY;
 === END ===
+=== FILE: src/styles/radar.css ===
+.radar {
+  display: flex;
+  flex-direction: column;
+}
 
-=== FILE: src/styles/ambient.css ===
-.ambient {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
+.radar .card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.radar-map {
+  position: relative;
+  height: 320px;
+  border-radius: var(--radius-md);
   overflow: hidden;
+  background: #0e1422;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
 }
-.amb-layer {
+
+.radar-map.is-dragging {
+  cursor: grabbing;
+}
+
+.radar-loading {
   position: absolute;
   inset: 0;
-  opacity: 1;
-  transition: opacity 600ms var(--ease);
-}
-.amb-layer.out {
-  opacity: 0;
-}
-.ambient.paused * {
-  animation-play-state: paused !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-3);
 }
 
-/* clear day: warm corner glow */
-.amb-glow {
+.radar-layer {
   position: absolute;
-  inset: -20% -20% 30% 30%;
-  background: radial-gradient(circle at 80% 20%, rgba(255, 236, 200, 0.5), transparent 60%);
-  will-change: opacity;
-  animation: amb-pulse 8s ease-in-out infinite;
-}
-@keyframes amb-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  inset: 0;
 }
 
-/* clear night: stars */
-.amb-stars-a, .amb-stars-b {
+.radar-layer.radar-tiles {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.radar-tile {
   position: absolute;
   top: 0;
   left: 0;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  will-change: opacity;
-}
-.amb-stars-a { animation: amb-twinkle 5s ease-in-out infinite; }
-.amb-stars-b { animation: amb-twinkle 4s ease-in-out infinite reverse; }
-@keyframes amb-twinkle {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
+  width: 256px;
+  height: 256px;
+  user-select: none;
+  pointer-events: none;
 }
 
-/* clouds */
-.amb-cloud {
+.radar-marker {
   position: absolute;
-  left: -30vw;
-  width: 50vw;
-  height: 16vh;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  filter: blur(30px);
+  top: 0;
+  left: 0;
+  pointer-events: none;
   will-change: transform;
-  animation: amb-drift 120s linear infinite alternate;
-}
-.amb-cloudy .amb-cloud { background: rgba(255, 255, 255, 0.14); }
-@keyframes amb-drift {
-  from { transform: translateX(0); }
-  to { transform: translateX(140vw); }
 }
 
-/* fog bands */
-.amb-band {
+.radar-dot {
   position: absolute;
-  left: -20vw;
-  width: 60vw;
-  height: 14vh;
+  top: -5px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  filter: blur(26px);
-  will-change: transform;
-  animation: amb-drift 90s linear infinite alternate;
-}
-.amb-band.alt { animation-direction: alternate-reverse; }
-.amb-band:nth-child(3) { animation-direction: alternate-reverse; }
-
-/* rain */
-.amb-rain-layer {
-  position: absolute;
-  inset: -100% 0 0 0;
-  height: 200%;
-  background-image: repeating-linear-gradient(
-    105deg,
-    rgba(200, 220, 255, 0) 0 12px,
-    rgba(200, 220, 255, 0.25) 12px 13px,
-    rgba(200, 220, 255, 0) 13px 24px
-  );
-  will-change: transform;
-  animation: amb-fall 0.6s linear infinite;
-}
-.amb-rain.drizzle .amb-rain-layer { animation-duration: 1.1s; }
-.amb-rain-layer.far { opacity: 0.5; animation-duration: 0.9s; }
-.amb-rain.storm .amb-rain-layer { opacity: 0.7; }
-.amb-rain.storm .amb-rain-layer.far { opacity: 0.4; }
-@keyframes amb-fall {
-  from { transform: translate3d(0, -25%, 0); }
-  to { transform: translate3d(-8%, 0, 0); }
-}
-.amb-flash {
-  position: absolute;
-  inset: 0;
   background: #fff;
-  opacity: 0;
-  will-change: opacity;
-  animation: amb-lightning 9s linear infinite;
-}
-@keyframes amb-lightning {
-  0%, 97%, 100% { opacity: 0; }
-  98% { opacity: 0.35; }
-  98.5% { opacity: 0; }
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
-/* snow */
-.amb-snow-layer {
+.radar-dot::after {
+  content: "";
   position: absolute;
-  inset: -50% 0 0 0;
-  height: 200%;
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.85) 1px, transparent 2px),
-    radial-gradient(circle, rgba(255, 255, 255, 0.6) 1px, transparent 2px);
-  background-size: 60px 60px, 120px 120px;
-  background-position: 0 0, 30px 40px;
-  will-change: transform;
-  animation: amb-snowfall 8s linear infinite;
-}
-.amb-snow-layer.big {
-  animation-duration: 12s;
-  animation-name: amb-snowfall-big;
-  opacity: 0.8;
-}
-@keyframes amb-snowfall {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-4%, 25%, 0); }
-}
-@keyframes amb-snowfall-big {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(6%, 25%, 0); }
+  inset: -4px;
+  border-radius: 50%;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ambient * {
-    animation: none !important;
-  }
-  .amb-flash {
-    display: none;
-  }
-}
-=== END ===
-
-=== FILE: src/main.ts ===
-import "./styles.css";
-import "./styles/cards.css";
-import "./styles/sidebar.css";
-import type { Location, WeatherBundle } from "./types";
-import { describe, skyGradient } from "./theme";
-import { getCached, getSaved, getWeather, saveLocation } from "./api";
-import { state, set, subscribe } from "./state";
-import { renderHero } from "./ui/hero";
-import { renderHourly } from "./ui/hourly";
-import { renderDaily } from "./ui/daily";
-import { renderCards } from "./ui/cards";
-import { initSidebar } from "./ui/sidebar";
-import { setAmbient } from "./ambient";
-
-const DEFAULT: Location = {
-  name: "Berlin",
-  country: "Germany",
-  admin1: "Berlin",
-  latitude: 52.52,
-  longitude: 13.405,
-};
-
-let skyFront = 0;
-let skyEls: HTMLDivElement[] = [];
-let currentMain: HTMLElement | null = null;
-
-function setupShell(): { main: HTMLElement } {
-  const app = document.getElementById("app");
-  if (!app) throw new Error("missing #app");
-
-  const sky = document.createElement("div");
-  sky.className = "sky";
-  skyEls = [0, 1].map(() => {
-    const l = document.createElement("div");
-    l.className = "sky-layer";
-    sky.appendChild(l);
-    return l;
-  });
-
-  const sidebar = document.createElement("aside");
-  sidebar.id = "sidebar";
-  sidebar.className = "sidebar";
-
-  const main = document.createElement("main");
-  main.id = "main";
-
-  app.replaceChildren(sky, sidebar, main);
-  return { main };
+.radar-label {
+  position: absolute;
+  top: -7px;
+  left: 8px;
+  font-size: 11px;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-function applySky(bundle: WeatherBundle): void {
-  const c = bundle.current;
-  const cond = describe(c.weatherCode, c.isDay);
-  const grad = skyGradient(cond.kind, c.isDay);
-  const back = skyEls[1 - skyFront];
-  const front = skyEls[skyFront];
-  if (front.style.backgroundImage === grad) return;
-
-  back.style.backgroundImage = grad;
-  void back.offsetWidth;
-  back.classList.add("active");
-  front.classList.remove("active");
-  skyFront = 1 - skyFront;
-  setAmbient(cond.kind, c.isDay);
+.radar-zoom {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-function renderMain(main: HTMLElement, b: WeatherBundle): void {
-  currentMain = main;
-  main.replaceChildren(
-    renderHero(b, state.settings),
-    renderHourly(b, state.settings),
-  );
-  const grid = document.createElement("section");
-  grid.id = "grid";
-  grid.className = "grid";
-  const daily = renderDaily(b, state.settings);
-  daily.classList.add("span-2", "row-2");
-  grid.appendChild(daily);
-  for (const card of renderCards(b, state.settings)) grid.appendChild(card);
-  main.appendChild(grid);
+.radar-zoom-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  cursor: pointer;
+  transition: background 150ms var(--ease);
 }
 
-function renderPlaceholder(main: HTMLElement, text: string): void {
-  const box = document.createElement("div");
-  box.className = "loading";
-  box.textContent = text;
-  main.replaceChildren(box);
+.radar-zoom-btn:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.55);
 }
 
-function renderError(main: HTMLElement, retry: () => void): void {
-  const box = document.createElement("div");
-  box.className = "error";
-  const msg = document.createElement("div");
-  msg.textContent = state.error ?? "Something went wrong.";
-  const btn = document.createElement("button");
-  btn.textContent = "Retry";
-  btn.addEventListener("click", retry);
-  box.append(msg, btn);
-  main.replaceChildren(box);
+.radar-zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
-async function selectLocation(loc: Location): Promise<void> {
-  const main = currentMain ?? document.getElementById("main");
-  if (!main) return;
-
-  set({ current: loc, loading: true, error: null });
-
-  try {
-    const cached = await getCached(loc);
-    if (cached) {
-      set({ bundle: cached });
-      applySky(cached);
-      renderMain(main, cached);
-    } else if (!state.bundle) {
-      renderPlaceholder(main, "Loading weather\u2026");
-    }
-  } catch {
-    /* no cache */
-  }
-
-  try {
-    const b = await getWeather(loc, false);
-    set({ bundle: b, loading: false });
-    applySky(b);
-    renderMain(main, b);
-  } catch (err) {
-    set({ loading: false, error: String(err) });
-    renderError(main, () => void selectLocation(loc));
-  }
+.radar-attrib {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  font-size: 10px;
+  color: var(--text-3);
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-async function init(): Promise<void> {
-  const { main } = setupShell();
-  currentMain = main;
-
-  initSidebar(document.getElementById("sidebar")!, (loc) => {
-    void selectLocation(loc);
-  });
-
-  let saved: Location[] = [];
-  try {
-    saved = await getSaved();
-  } catch {
-    saved = [];
-  }
-  if (saved.length === 0) {
-    try {
-      saved = await saveLocation(DEFAULT);
-    } catch {
-      saved = [DEFAULT];
-    }
-  }
-  set({ saved });
-  const loc = saved[0] ?? DEFAULT;
-
-  try {
-    const cached = await getCached(loc);
-    if (cached) {
-      set({ bundle: cached, current: loc });
-      applySky(cached);
-      renderMain(main, cached);
-    }
-  } catch {
-    /* no cache */
-  }
-
-  set({ current: loc, loading: true, error: null });
-  try {
-    const b = await getWeather(loc, false);
-    set({ bundle: b, loading: false });
-    applySky(b);
-    renderMain(main, b);
-  } catch (err) {
-    set({ loading: false, error: String(err) });
-    renderError(main, () => void selectLocation(loc));
-  }
-
-  const refresh = () => {
-    const cur = state.current;
-    if (!cur || state.loading) return;
-    void (async () => {
-      try {
-        const b = await getWeather(cur, false);
-        set({ bundle: b });
-        applySky(b);
-        renderMain(main, b);
-      } catch {
-        /* keep last bundle */
-      }
-    })();
-  };
-
-  // Re-render on unit changes without refetching.
-  subscribe((s) => {
-    if (s.bundle && s.settings) {
-      const m = currentMain;
-      if (m && m.querySelector("#grid")) renderMain(m, s.bundle);
-    }
-  });
-
-  setInterval(refresh, 10 * 60 * 1000);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refresh();
-  });
+.radar-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
 }
 
-void init();
+.radar-play {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  cursor: pointer;
+  transition: background 150ms var(--ease);
+}
+
+.radar-play:hover {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.radar-slider {
+  flex: 1;
+  min-width: 0;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.radar-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.radar-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.radar-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+}
+
+.radar-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+}
+
+.radar-time {
+  flex: 0 0 auto;
+  min-width: 96px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
 === END ===

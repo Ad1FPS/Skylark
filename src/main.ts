@@ -1,6 +1,7 @@
 import "./styles.css";
 import "./styles/cards.css";
 import "./styles/sidebar.css";
+import "./styles/radar.css";
 import type { Location, WeatherBundle } from "./types";
 import { describe, skyGradient } from "./theme";
 import { getCached, getSaved, getWeather, saveLocation } from "./api";
@@ -9,6 +10,7 @@ import { renderHero } from "./ui/hero";
 import { renderHourly } from "./ui/hourly";
 import { renderDaily } from "./ui/daily";
 import { renderCards } from "./ui/cards";
+import { renderRadar } from "./ui/radar";
 import { initSidebar } from "./ui/sidebar";
 import { setAmbient } from "./ambient";
 
@@ -76,6 +78,7 @@ function renderMain(main: HTMLElement, b: WeatherBundle): void {
   const daily = renderDaily(b, state.settings);
   daily.classList.add("span-2", "row-2");
   grid.appendChild(daily);
+  grid.appendChild(renderRadar(b));
   for (const card of renderCards(b, state.settings)) grid.appendChild(card);
   main.appendChild(grid);
 }
