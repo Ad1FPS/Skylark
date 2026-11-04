@@ -8,6 +8,7 @@ import "./styles/fx.css";
 import "./styles/titlebar.css";
 import "./styles/detail.css";
 import "./styles/popover.css";
+import "./styles/glass.css";
 import "./styles/day.css";
 import { createTitlebar } from "./ui/titlebar";
 import { openDetail, type DetailKind } from "./ui/detail";
@@ -30,6 +31,7 @@ import { renderRadar } from "./ui/radar";
 import { renderNowcast } from "./ui/nowcast";
 import { initSidebar } from "./ui/sidebar";
 import { createFx } from "./fx/engine";
+import { createGlass, type Glass } from "./fx/glass";
 import { sceneFor, sceneForCode } from "./scene";
 import type { Fx } from "./fx/types";
 
@@ -42,6 +44,7 @@ const DEFAULT: Location = {
 };
 
 let fx: Fx | null = null;
+let glass: Glass | null = null;
 let skyFront = 0;
 let skyEls: HTMLDivElement[] = [];
 let currentMain: HTMLElement | null = null;
@@ -74,6 +77,8 @@ function setupShell(): { main: HTMLElement } {
   app.replaceChildren(sky, sidebar, main, createTitlebar());
   fx = createFx(sky);
   fx.setSmooth(state.settings.fps === "60");
+  glass = createGlass();
+  glass.setSmooth(state.settings.fps === "60");
   return { main };
 }
 
@@ -94,7 +99,9 @@ function applySky(bundle: WeatherBundle, instant = false): void {
   const c = bundle.current;
   setSkyGradient(skyGradient(describe(c.weatherCode, c.isDay).kind, c.isDay));
   // The scene changes with wind and rain intensity even when the gradient does not.
-  fx?.setScene(sceneFor(bundle), instant);
+  const scene = sceneFor(bundle);
+  fx?.setScene(scene, instant);
+  glass?.setScene(scene);
 }
 
 function renderMain(main: HTMLElement, b: WeatherBundle): void {
@@ -183,7 +190,9 @@ async function init(): Promise<void> {
     void import("./fx/debug").then((m) =>
       m.initFxDebug((i) => {
         setSkyGradient(skyGradient(describe(i.code, i.isDay).kind, i.isDay));
-        fx?.setScene(sceneForCode(i));
+        const scene = sceneForCode(i);
+        fx?.setScene(scene);
+        glass?.setScene(scene);
       }),
     );
   }
@@ -257,6 +266,7 @@ async function init(): Promise<void> {
   // Re-render on unit changes without refetching.
   subscribe((s) => {
     fx?.setSmooth(s.settings.fps === "60");
+    glass?.setSmooth(s.settings.fps === "60");
     if (s.bundle && s.settings) {
       const m = currentMain;
       if (m && m.querySelector("#grid")) renderMain(m, s.bundle);
