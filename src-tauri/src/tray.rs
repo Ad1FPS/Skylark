@@ -10,7 +10,7 @@ use crate::weather;
 
 pub struct TrayStatus(pub MenuItem<tauri::Wry>);
 
-const STATUS_INITIAL: &str = "Weather";
+const STATUS_INITIAL: &str = "Skylark";
 
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
     let status = MenuItem::with_id(app, "status", STATUS_INITIAL, false, None::<&str>)?;

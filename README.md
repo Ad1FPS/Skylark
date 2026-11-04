@@ -1,4 +1,4 @@
-# Weatherapp
+# Skylark
 
 A lightweight weather app for Windows, inspired by the macOS Weather app. Lightweight first, modern UI second.
 

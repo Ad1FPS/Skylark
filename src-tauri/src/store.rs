@@ -50,7 +50,7 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        std::env::temp_dir().join(format!("weatherapp_test_{tag}_{nanos}"))
+        std::env::temp_dir().join(format!("skylark_test_{tag}_{nanos}"))
     }
 
     fn sample() -> WeatherBundle {

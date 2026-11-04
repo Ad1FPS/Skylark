@@ -16,7 +16,7 @@ impl Http {
     pub fn new() -> Self {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(10))
-            .user_agent("weatherapp/0.1")
+            .user_agent("skylark/0.1")
             .build()
             .unwrap_or_default();
         Http(client)
