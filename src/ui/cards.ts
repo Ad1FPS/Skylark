@@ -3,6 +3,7 @@ import { compass, esc, tempDeg, tempColor, clock, localClock } from "../format";
 import { icon } from "../icons";
 import { renderMoonCard } from "./moon-card";
 import { renderAveragesCard } from "./averages-card";
+import { renderWindMap } from "./windmap";
 
 const AQI_STOPS: Array<[number, string]> = [
   [0, "#4ade80"],
@@ -344,6 +345,7 @@ export function renderCards(b: WeatherBundle, s: Settings): HTMLElement[] {
   out.push(renderAveragesCard(b, s));
   out.push(tag(sunCard(b, s), "sun"));
   out.push(tag(windCard(b, s), "wind"));
+  out.push(renderWindMap(b, s));
   out.push(tag(renderMoonCard(b, s), "moon"));
   out.push(tag(precipCard(b), "precipitation"));
   out.push(tag(feelsCard(b, s), "feels"));

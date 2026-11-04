@@ -41,3 +41,31 @@ export async function getNormal(lat: number, lon: number, date: string): Promise
     return null;
   }
 }
+
+export interface WindGrid {
+  times: number[];
+  cols: number;
+  rows: number;
+  latMin: number;
+  latMax: number;
+  lonMin: number;
+  lonMax: number;
+  u: number[][];
+  v: number[][];
+}
+
+export async function getWindGrid(
+  latMin: number,
+  latMax: number,
+  lonMin: number,
+  lonMax: number,
+  cols: number,
+  rows: number,
+): Promise<WindGrid | null> {
+  try {
+    const grid = await invoke<WindGrid>("get_wind_grid", { latMin, latMax, lonMin, lonMax, cols, rows });
+    return grid && Array.isArray(grid.times) && grid.times.length > 0 ? grid : null;
+  } catch {
+    return null;
+  }
+}

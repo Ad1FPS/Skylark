@@ -3,6 +3,7 @@ mod commands;
 mod store;
 mod tray;
 mod weather;
+mod wind;
 
 use commands::Http;
 
@@ -32,6 +33,7 @@ pub fn run() {
             commands::remove_location,
             commands::set_current_location,
             climate::get_normal,
+            wind::get_wind_grid,
         ])
         .setup(|app| {
             tray::setup(app.handle())?;
