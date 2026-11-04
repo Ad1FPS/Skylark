@@ -169,28 +169,32 @@
 
 .city-remove {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 18px;
-  height: 18px;
+  top: 10px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-2);
-  background: transparent;
+  background: rgba(255, 255, 255, 0.14);
   border: 0;
   border-radius: 50%;
   cursor: pointer;
   opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms var(--ease), background 140ms var(--ease), color 140ms var(--ease);
 }
 
 .city:hover .city-remove,
-.city-remove:focus {
+.city-remove:focus-visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .city-remove:hover {
-  background: rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .side-settings {
@@ -322,19 +326,16 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
-.city-remove {
-  width: 22px;
-  height: 22px;
-}
-
-.city:hover .city-remove {
-  background: rgba(255, 255, 255, 0.1);
-}
-
 .city-top {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  transition: padding-right 140ms var(--ease);
+}
+
+/* Make room beside the temperature for the remove button instead of drawing over it. */
+.city:hover .city-top {
+  padding-right: 28px;
 }
 
 .city-top .city-name {
