@@ -79,25 +79,73 @@ export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
   const title = document.createElement("h2");
   title.className = "card-title";
   title.innerHTML = `${icon("drop", 13)}<span>${esc("RADAR")}</span>`;
-  const picker = document.createElement("select");
-  picker.className = "radar-source";
-  picker.setAttribute("aria-label", "Radar source");
   const choices: [Settings["radar"], string][] = [
     ["auto", "Auto"],
     ...PROVIDERS.map((p): [Settings["radar"], string] => [p.id, p.name]),
   ];
-  for (const [value, label] of choices) {
-    const opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = label;
-    picker.appendChild(opt);
-  }
-  picker.value = settings.radar;
-  picker.addEventListener("change", () => {
-    const next = { ...state.settings, radar: picker.value as Settings["radar"] };
-    set({ settings: next });
-    saveSettings(next);
+  const picker = document.createElement("button");
+  picker.type = "button";
+  picker.className = "radar-source";
+  picker.setAttribute("aria-label", "Radar source");
+  picker.setAttribute("aria-haspopup", "menu");
+  let activeName: string | null = null;
+  const pickerLabel = (): string => {
+    const base = choices.find(([v]) => v === settings.radar)?.[1] ?? "Auto";
+    return settings.radar === "auto" && activeName ? `${base} \u00B7 ${activeName}` : base;
+  };
+  const paintPicker = (): void => {
+    picker.innerHTML = `<span>${esc(pickerLabel())}</span><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  };
+  paintPicker();
+
+  let menu: HTMLElement | null = null;
+  const closeMenu = (): void => {
+    menu?.remove();
+    menu = null;
+    picker.setAttribute("aria-expanded", "false");
+  };
+  const openMenu = (): void => {
+    closeMenu();
+    const m = document.createElement("div");
+    m.className = "ctx-menu radar-menu";
+    m.setAttribute("role", "menu");
+    for (const [value, label] of choices) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("role", "menuitemradio");
+      const on = value === settings.radar;
+      btn.setAttribute("aria-checked", String(on));
+      btn.innerHTML = `<span class="radar-menu-check">${on ? "\u2713" : ""}</span>${esc(label)}`;
+      btn.addEventListener("click", () => {
+        closeMenu();
+        if (on) return;
+        const next = { ...state.settings, radar: value };
+        set({ settings: next });
+        saveSettings(next);
+      });
+      m.appendChild(btn);
+    }
+    document.body.appendChild(m);
+    const r = picker.getBoundingClientRect();
+    m.style.left = `${Math.max(8, Math.min(r.right - m.offsetWidth, window.innerWidth - m.offsetWidth - 8))}px`;
+    m.style.top = `${r.bottom + 4}px`;
+    menu = m;
+    picker.setAttribute("aria-expanded", "true");
+  };
+  picker.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (menu) closeMenu();
+    else openMenu();
   });
+  const onPointerDown = (e: PointerEvent): void => {
+    if (menu && !menu.contains(e.target as Node) && e.target !== picker) closeMenu();
+  };
+  const onKey = (e: KeyboardEvent): void => {
+    if (e.key === "Escape") closeMenu();
+  };
+  document.addEventListener("pointerdown", onPointerDown);
+  document.addEventListener("keydown", onKey);
+  window.addEventListener("blur", closeMenu);
   title.appendChild(picker);
   card.appendChild(title);
 
@@ -146,8 +194,8 @@ export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
       pick: settings.radar,
       onProvider: (name) => {
         // In Auto mode, show which provider actually answered.
-        const auto = picker.querySelector<HTMLOptionElement>('option[value="auto"]');
-        if (auto) auto.textContent = settings.radar === "auto" && name ? `Auto \u00B7 ${name}` : "Auto";
+        activeName = name;
+        paintPicker();
       },
       isDisposed: () => disposed,
     });
@@ -170,6 +218,10 @@ export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
   const cleanup = () => {
     disposed = true;
     io.disconnect();
+    closeMenu();
+    document.removeEventListener("pointerdown", onPointerDown);
+    document.removeEventListener("keydown", onKey);
+    window.removeEventListener("blur", closeMenu);
     ownerOf(map)?.dispose();
   };
 
