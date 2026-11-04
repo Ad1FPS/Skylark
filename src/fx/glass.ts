@@ -10,13 +10,13 @@ const ACTIVE_RAIN = 0.02;
 const FADE_OUT = 3;
 const TILES_REFRESH_MS = 250;
 const RESIZE_DEBOUNCE_MS = 120;
-const BEAD_CAP = 200;
-const BEAD_DENSITY = 2400;
-const BEAD_MIN_R = 1.2;
-const BEAD_MAX_R = 2.2;
+const BEAD_CAP = 240;
+const BEAD_DENSITY = 1500;
+const BEAD_MIN_R = 1.1;
+const BEAD_MAX_R = 2.5;
 const BEAD_GROW = 0.2;
-const BEAD_LIMIT_R = 4.6;
-const BEAD_RUN_R = 3.6;
+const BEAD_LIMIT_R = 5.2;
+const BEAD_RUN_R = 3.9;
 const BEAD_END_R = 1.4;
 const STREAK_BASE = 16;
 const GOVERNOR_FRAMES = 45;
@@ -80,13 +80,31 @@ interface Splash {
 }
 
 const SPRITE_SCALE = 2;
-const beadSprites = new Map<number, HTMLCanvasElement>();
+type BeadShape = "round" | "oval" | "tear";
+const beadSprites = new Map<string, HTMLCanvasElement>();
 
-/** One pre-drawn bead per quarter-pixel radius: a faint lens disc, a dark lower rim and a bright specular dot. */
-function beadSprite(r: number): HTMLCanvasElement {
-  const cached = beadSprites.get(r);
+/** The outline of one bead centred on (m, m): round, a slightly sagging oval, or a teardrop with its point up. */
+function beadPath(g: CanvasRenderingContext2D, shape: BeadShape, m: number, r: number): void {
+  g.beginPath();
+  if (shape === "tear") {
+    g.moveTo(m, m - r * 1.9);
+    g.bezierCurveTo(m - r * 0.15, m - r * 1.0, m - r, m - r * 0.5, m - r, m);
+    g.arc(m, m, r, Math.PI, 0, true);
+    g.bezierCurveTo(m + r, m - r * 0.5, m + r * 0.15, m - r * 1.0, m, m - r * 1.9);
+    g.closePath();
+  } else if (shape === "oval") {
+    g.ellipse(m, m, r * 0.88, r * 1.22, 0, 0, Math.PI * 2);
+  } else {
+    g.arc(m, m, r, 0, Math.PI * 2);
+  }
+}
+
+/** One pre-drawn bead per shape and quarter-pixel radius: a faint lens body, a dark lower rim and bright glints. */
+function beadSprite(r: number, shape: BeadShape): HTMLCanvasElement {
+  const key = `${shape}${r}`;
+  const cached = beadSprites.get(key);
   if (cached) return cached;
-  const size = Math.ceil((r * 2 + 4) * SPRITE_SCALE);
+  const size = Math.ceil((r * 4 + 4) * SPRITE_SCALE);
   const c = document.createElement("canvas");
   c.width = size;
   c.height = size;
@@ -94,24 +112,40 @@ function beadSprite(r: number): HTMLCanvasElement {
   if (g) {
     g.scale(SPRITE_SCALE, SPRITE_SCALE);
     const m = size / SPRITE_SCALE / 2;
-    const grad = g.createRadialGradient(m, m, 0, m, m, r);
-    grad.addColorStop(0, "rgba(255,255,255,0.07)");
-    grad.addColorStop(1, "rgba(255,255,255,0.26)");
+    const grad = g.createRadialGradient(m - r * 0.2, m - r * 0.3, 0, m, m, r * 1.2);
+    grad.addColorStop(0, "rgba(255,255,255,0.1)");
+    grad.addColorStop(0.7, "rgba(255,255,255,0.24)");
+    grad.addColorStop(1, "rgba(255,255,255,0.42)");
     g.fillStyle = grad;
-    g.beginPath();
-    g.arc(m, m, r, 0, Math.PI * 2);
+    beadPath(g, shape, m, r);
     g.fill();
-    g.strokeStyle = "rgba(0,0,0,0.36)";
-    g.lineWidth = Math.max(0.6, r * 0.18);
+    // Dark refractive rim, strongest along the bottom.
+    g.save();
+    beadPath(g, shape, m, r);
+    g.clip();
+    g.strokeStyle = "rgba(0,0,0,0.5)";
+    g.lineWidth = Math.max(0.8, r * 0.34);
     g.beginPath();
-    g.arc(m, m, r * 0.85, 0.15 * Math.PI, 0.85 * Math.PI);
+    g.ellipse(m, m + r * 0.1, r * 0.95, r * (shape === "oval" ? 1.3 : 1.02), 0, 0.1 * Math.PI, 0.9 * Math.PI);
     g.stroke();
-    g.fillStyle = "rgba(255,255,255,0.8)";
+    g.restore();
+    // Light rim along the top edge.
+    g.strokeStyle = "rgba(255,255,255,0.35)";
+    g.lineWidth = Math.max(0.5, r * 0.14);
     g.beginPath();
-    g.arc(m - r * 0.3, m - r * 0.3, r * 0.28, 0, Math.PI * 2);
+    g.arc(m, m, r * 0.92, 1.15 * Math.PI, 1.85 * Math.PI);
+    g.stroke();
+    // Specular glint up-left, small counter-glint down-right.
+    g.fillStyle = "rgba(255,255,255,0.95)";
+    g.beginPath();
+    g.ellipse(m - r * 0.3, m - r * 0.28, r * 0.26, r * 0.18, -0.6, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "rgba(255,255,255,0.4)";
+    g.beginPath();
+    g.arc(m + r * 0.35, m + r * 0.4, r * 0.12, 0, Math.PI * 2);
     g.fill();
   }
-  beadSprites.set(r, c);
+  beadSprites.set(key, c);
   return c;
 }
 
@@ -201,7 +235,7 @@ export function createGlass(): Glass {
       tile: t.el,
       x: 10 + rand() * w,
       y: 10 + rand() * h,
-      r: lerp(BEAD_MIN_R, BEAD_MAX_R, rand()),
+      r: rand() < 0.12 ? lerp(3, 4.2, rand()) : lerp(BEAD_MIN_R, BEAD_MAX_R, rand() * rand() * 0.6 + rand() * 0.4),
       age: 0,
       life: lerp(25, 45, rand()),
       fading: false,
@@ -398,7 +432,8 @@ export function createGlass(): Glass {
       const y = t.rect.top + b.y;
       const r = b.r;
 
-      const sp = beadSprite(Math.max(1, Math.round(r * 4) / 4));
+      const shape: BeadShape = b.running ? "tear" : r > 3 ? "oval" : "round";
+      const sp = beadSprite(Math.max(0.75, Math.round(r * 4) / 4), shape);
       ctx.globalAlpha = fade;
       ctx.drawImage(sp, x - sp.width / (2 * SPRITE_SCALE), y - sp.height / (2 * SPRITE_SCALE), sp.width / SPRITE_SCALE, sp.height / SPRITE_SCALE);
     }
