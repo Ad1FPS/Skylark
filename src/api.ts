@@ -32,3 +32,12 @@ export function locateIp(): Promise<Location> {
 export function setCurrentLocation(location: Location): Promise<void> {
   return invoke<void>("set_current_location", { location });
 }
+
+export async function getNormal(lat: number, lon: number, date: string): Promise<number | null> {
+  try {
+    const v = await invoke<number | null>("get_normal", { latitude: lat, longitude: lon, date });
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  } catch {
+    return null;
+  }
+}

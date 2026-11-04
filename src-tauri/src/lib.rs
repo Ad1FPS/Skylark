@@ -1,3 +1,4 @@
+mod climate;
 mod commands;
 mod store;
 mod tray;
@@ -30,6 +31,7 @@ pub fn run() {
             commands::save_location,
             commands::remove_location,
             commands::set_current_location,
+            climate::get_normal,
         ])
         .setup(|app| {
             tray::setup(app.handle())?;

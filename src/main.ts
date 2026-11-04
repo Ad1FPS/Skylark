@@ -10,6 +10,7 @@ import "./styles/detail.css";
 import "./styles/popover.css";
 import "./styles/glass.css";
 import "./styles/moon.css";
+import "./styles/averages.css";
 import "./styles/day.css";
 import { createTitlebar } from "./ui/titlebar";
 import { openDetail, type DetailKind } from "./ui/detail";
