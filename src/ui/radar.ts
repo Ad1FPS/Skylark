@@ -587,6 +587,8 @@ function createEngine(a: EngineArgs): Engine {
 
   map.addEventListener("pointerdown", (e) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
+    // Pointer capture would swallow the click on the zoom buttons.
+    if ((e.target as HTMLElement).closest(".radar-zoom")) return;
     dragging = true;
     dragId = e.pointerId;
     lastX = e.clientX;
