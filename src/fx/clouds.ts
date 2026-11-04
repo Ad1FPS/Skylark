@@ -32,13 +32,13 @@ function sprites(tone: Tone): HTMLCanvasElement[] {
       const r = rng(1000 + v * 37);
       // Many small soft puffs inside a dome with a flat base read as billows, not as circles.
       const puffs: { x: number; y: number; radius: number }[] = [];
-      const N = 90;
+      const N = 64;
       for (let i = 0; i < N; i++) {
         const u = r() * 2 - 1;
         const dome = Math.sqrt(Math.max(0, 1 - u * u));
         const top = 128 - dome * (60 + r() * 30);
         const y = lerp(top, 148, Math.pow(r(), 0.7));
-        const radius = lerp(10, 34, r()) * (0.5 + 0.6 * dome);
+        const radius = lerp(14, 40, r()) * (0.5 + 0.6 * dome);
         puffs.push({ x: SPRITE_W / 2 + u * 190, y, radius });
       }
       const puff = (p: { x: number; y: number; radius: number }, rgb: string, dx: number, dy: number, k: number, a: number): void => {
@@ -55,7 +55,7 @@ function sprites(tone: Tone): HTMLCanvasElement[] {
       for (const p of puffs) puff(p, tone_.shade, 0, 0, 1.4, 0.7);
       // Light comes from the upper left: tops catch it, undersides stay shaded.
       g.globalCompositeOperation = "source-atop";
-      for (const p of puffs) puff(p, tone_.light, -0.35, -0.5, 1.0, 0.4);
+      for (const p of puffs) puff(p, tone_.light, -0.35, -0.5, 1.0, 0.3);
       g.globalCompositeOperation = "source-over";
       // Soften the whole thing so no puff outline survives.
       const soft = document.createElement("canvas");
@@ -63,7 +63,7 @@ function sprites(tone: Tone): HTMLCanvasElement[] {
       soft.height = SPRITE_H;
       const sg = soft.getContext("2d");
       if (sg) {
-        sg.filter = "blur(2.5px)";
+        sg.filter = "blur(3.5px)";
         sg.drawImage(c, 0, 0);
         g.clearRect(0, 0, SPRITE_W, SPRITE_H);
         g.drawImage(soft, 0, 0);
@@ -99,6 +99,8 @@ export function createClouds(): Layer {
   let width = 1;
   let height = 1;
   let t = 0;
+  // Bigger windows get bigger clouds, so a fullscreen sky is not a few small tufts.
+  let sizeK = 1;
   let dir = 1;
   let lastScene: Scene | null = null;
 
@@ -127,6 +129,7 @@ export function createClouds(): Layer {
       const sy = h / height;
       width = w;
       height = h;
+      sizeK = clamp(Math.max(w / 1100, h / 720), 1, 2.4);
       if (first) {
         place();
         return;
@@ -150,7 +153,7 @@ export function createClouds(): Layer {
         xs[i] += dir * speed * dt;
         present[i] = clamp(n - i, 0, 1);
 
-        const margin = SPRITE_W * c.scale;
+        const margin = SPRITE_W * c.scale * sizeK;
         if (xs[i] > width + margin) xs[i] = -margin;
         else if (xs[i] < -margin) xs[i] = width + margin;
       }
@@ -173,11 +176,13 @@ export function createClouds(): Layer {
       const p = present[i];
       if (p <= 0.001) continue;
       const c = clouds[i];
-      const w = SPRITE_W * c.scale;
-      const h = SPRITE_H * c.scale;
+      const w = SPRITE_W * c.scale * sizeK;
+      const h = SPRITE_H * c.scale * sizeK;
       const x = xs[i] - w / 2;
       const y = ys[i] + Math.sin(t * 0.1 + i) * 3 - h / 2;
-      const baseAlpha = (0.4 + 0.6 * s.clouds) * c.d * p;
+      // Clouds near the horizon sit in haze: lighter and softer than the ones overhead.
+      const low = clamp((ys[i] / height - 0.5) / 0.5);
+      const baseAlpha = (0.4 + 0.6 * s.clouds) * c.d * p * (1 - 0.4 * low * low * (3 - 2 * low));
       for (const tone of TONES) {
         const wt = weights[tone];
         if (wt <= 0.02) continue;
