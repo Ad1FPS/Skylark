@@ -3,7 +3,6 @@ import { icon } from "../icons";
 import type { DetailContent } from "./detail-common";
 import { windView, precipitationView, humidityView, feelsView, pressureView, visibilityView } from "./detail-weather";
 import { uvView, airView, sunView } from "./detail-air-sun";
-import { radarView } from "./detail-forecast";
 import { dayView } from "./detail-day";
 import type { PopoverHandle } from "./popover";
 import { openPopover } from "./popover";
@@ -18,8 +17,7 @@ export type DetailKind =
   | "visibility"
   | "air"
   | "sun"
-  | "day"
-  | "radar";
+  | "day";
 
 type View = (b: WeatherBundle, s: Settings, arg?: number) => DetailContent | null;
 
@@ -34,7 +32,6 @@ const VIEWS: Record<DetailKind, View> = {
   air: airView,
   sun: sunView,
   day: dayView,
-  radar: radarView,
 };
 
 let popover: PopoverHandle | null = null;

@@ -326,3 +326,120 @@
 .radar-large > .card-title {
   display: none;
 }
+
+/* ---- expanded radar: the map takes the right half, the dashboard reflows into the rest ---- */
+:root {
+  --radar-w: min(48vw, 720px);
+}
+
+main.radar-open {
+  padding-right: calc(var(--radar-w) + 32px);
+}
+
+.radar.expanded {
+  position: fixed;
+  top: calc(var(--tb) + 8px);
+  right: 16px;
+  bottom: 16px;
+  width: var(--radar-w);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  animation: radar-in 220ms var(--ease);
+}
+
+.radar.expanded .radar-map {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.radar.expanded .nowcast {
+  display: none;
+}
+
+.radar-close,
+.radar-legend {
+  display: none;
+}
+
+.radar.expanded .radar-close {
+  display: flex;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  background: rgba(20, 28, 44, 0.7);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.radar.expanded .radar-legend {
+  display: flex;
+  position: absolute;
+  top: 44px;
+  left: 10px;
+  z-index: 3;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text);
+  background: rgba(20, 28, 44, 0.7);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.radar-legend-title {
+  font-weight: 600;
+}
+
+.radar-legend-row {
+  display: flex;
+  gap: 8px;
+}
+
+.radar-legend-bar {
+  width: 8px;
+  height: 80px;
+  border-radius: 4px;
+  background: linear-gradient(to top, #6ec6ff, #2f6bff, #ffd23f, #ff7a1a, #e0245e);
+}
+
+.radar-legend-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--text-2);
+}
+
+@keyframes radar-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.98);
+  }
+}
+
+@media (max-width: 899px) {
+  main.radar-open {
+    padding-right: 24px;
+  }
+
+  .radar.expanded {
+    left: 16px;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar.expanded {
+    animation: none;
+  }
+}

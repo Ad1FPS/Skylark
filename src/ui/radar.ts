@@ -72,9 +72,21 @@ function frameLabel(frameTime: number, nowTime: number, offset: number): string 
 
 /* ---------- main render ---------- */
 
-export function renderRadar(b: WeatherBundle, settings: Settings, opts: { large?: boolean } = {}): HTMLElement {
+// The expanded state survives re-renders (unit changes rebuild the whole grid).
+let expandedPref = false;
+
+function setExpanded(card: HTMLElement, on: boolean): void {
+  expandedPref = on;
+  card.classList.toggle("expanded", on);
+  card.closest("main")?.classList.toggle("radar-open", on);
+  const btn = card.querySelector<HTMLButtonElement>(".radar-expand");
+  btn?.setAttribute("aria-label", on ? "Close large radar" : "Open large radar");
+  btn?.setAttribute("aria-pressed", String(on));
+}
+
+export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
   const card = document.createElement("section");
-  card.className = `card radar span-2${opts.large ? " radar-large" : ""}`;
+  card.className = "card radar span-2";
 
   const title = document.createElement("h2");
   title.className = "card-title";
@@ -141,19 +153,20 @@ export function renderRadar(b: WeatherBundle, settings: Settings, opts: { large?
     if (menu && !menu.contains(e.target as Node) && e.target !== picker) closeMenu();
   };
   const onKey = (e: KeyboardEvent): void => {
-    if (e.key === "Escape") closeMenu();
+    if (e.key !== "Escape") return;
+    if (menu) closeMenu();
+    else if (card.classList.contains("expanded")) setExpanded(card, false);
   };
   document.addEventListener("pointerdown", onPointerDown);
   document.addEventListener("keydown", onKey);
   window.addEventListener("blur", closeMenu);
-  if (!opts.large) {
+  {
     title.appendChild(picker);
-    // The grid's click handler opens the detail view for any [data-detail] element.
     const expand = document.createElement("button");
     expand.type = "button";
     expand.className = "radar-expand";
-    expand.dataset.detail = "radar";
     expand.setAttribute("aria-label", "Open large radar");
+    expand.addEventListener("click", () => setExpanded(card, !card.classList.contains("expanded")));
     expand.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7 1h4v4M5 11H1V7M11 1L7 5M1 11l4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     title.appendChild(expand);
   }
@@ -237,7 +250,10 @@ export function renderRadar(b: WeatherBundle, settings: Settings, opts: { large?
 
   // Attach the observer once the element is in the document.
   const attach = () => {
-    if (card.isConnected) io.observe(card);
+    if (card.isConnected) {
+      if (expandedPref) setExpanded(card, true);
+      io.observe(card);
+    }
     else requestAnimationFrame(attach);
   };
   requestAnimationFrame(attach);
@@ -341,6 +357,20 @@ function createEngine(a: EngineArgs): Engine {
   const zout = zoomButton("\u2212", "Zoom out");
   zoomBox.append(zin, zout);
   map.appendChild(zoomBox);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "radar-close";
+  closeBtn.setAttribute("aria-label", "Close large radar");
+  closeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  closeBtn.addEventListener("click", () => {
+    const card = map.closest<HTMLElement>(".radar");
+    if (card) setExpanded(card, false);
+  });
+  const legend = document.createElement("div");
+  legend.className = "radar-legend";
+  legend.innerHTML = '<span class="radar-legend-title">Precipitation</span><div class="radar-legend-row"><span class="radar-legend-bar"></span><span class="radar-legend-labels"><span>Heavy</span><span>Moderate</span><span>Light</span></span></div>';
+  map.append(closeBtn, legend);
 
   const badge = document.createElement("div");
   badge.className = "radar-badge";
