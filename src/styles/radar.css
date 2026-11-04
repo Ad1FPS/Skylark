@@ -298,3 +298,31 @@
 .radar.radar-off .radar-controls {
   display: none;
 }
+
+.radar .card-title .radar-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: 6px;
+  padding: 0;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  cursor: default;
+}
+
+.radar .card-title .radar-expand:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.radar-large .radar-map {
+  height: min(62vh, 640px);
+}
+
+.radar-large > .card-title {
+  display: none;
+}

@@ -3,6 +3,7 @@ import { icon } from "../icons";
 import type { DetailContent } from "./detail-common";
 import { windView, precipitationView, humidityView, feelsView, pressureView, visibilityView } from "./detail-weather";
 import { uvView, airView, sunView } from "./detail-air-sun";
+import { dailyView, radarView } from "./detail-forecast";
 
 export type DetailKind =
   | "wind"
@@ -13,7 +14,9 @@ export type DetailKind =
   | "pressure"
   | "visibility"
   | "air"
-  | "sun";
+  | "sun"
+  | "daily"
+  | "radar";
 
 type View = (b: WeatherBundle, s: Settings) => DetailContent | null;
 
@@ -27,6 +30,8 @@ const VIEWS: Record<DetailKind, View> = {
   visibility: visibilityView,
   air: airView,
   sun: sunView,
+  daily: dailyView,
+  radar: radarView,
 };
 
 let overlay: HTMLElement | null = null;

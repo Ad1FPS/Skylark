@@ -72,9 +72,9 @@ function frameLabel(frameTime: number, nowTime: number, offset: number): string 
 
 /* ---------- main render ---------- */
 
-export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
+export function renderRadar(b: WeatherBundle, settings: Settings, opts: { large?: boolean } = {}): HTMLElement {
   const card = document.createElement("section");
-  card.className = "card radar span-2";
+  card.className = `card radar span-2${opts.large ? " radar-large" : ""}`;
 
   const title = document.createElement("h2");
   title.className = "card-title";
@@ -146,7 +146,17 @@ export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
   document.addEventListener("pointerdown", onPointerDown);
   document.addEventListener("keydown", onKey);
   window.addEventListener("blur", closeMenu);
-  title.appendChild(picker);
+  if (!opts.large) {
+    title.appendChild(picker);
+    // The grid's click handler opens the detail view for any [data-detail] element.
+    const expand = document.createElement("button");
+    expand.type = "button";
+    expand.className = "radar-expand";
+    expand.dataset.detail = "radar";
+    expand.setAttribute("aria-label", "Open large radar");
+    expand.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M7 1h4v4M5 11H1V7M11 1L7 5M1 11l4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    title.appendChild(expand);
+  }
   card.appendChild(title);
 
   const map = document.createElement("div");
