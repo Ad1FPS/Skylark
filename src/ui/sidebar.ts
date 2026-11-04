@@ -4,6 +4,9 @@ import { searchCity, saveLocation, removeLocation, getWeather, getCached, locate
 import { esc, localClock, saveSettings, temp, tempDeg } from "../format";
 import { describe, skyGradient } from "../theme";
 import { icon } from "../icons";
+import { sceneFor } from "../scene";
+import { addMiniSky } from "../fx/minisky";
+import type { Scene } from "../fx/types";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 const cache = new Map<string, WeatherBundle>();
@@ -253,6 +256,7 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
 
   const renderList = (): void => {
     const saved = state.saved;
+    const pendingSkies: { sky: HTMLCanvasElement; scene: Scene }[] = [];
     ensureTemps(saved);
     list.replaceChildren();
     if (saved.length === 0) {
@@ -296,6 +300,15 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
         <button class="city-remove" type="button" aria-label="Remove">${icon("close", 12)}</button>
       `;
 
+      // A live miniature of the city's sky behind the text.
+      if (b) {
+        const sky = document.createElement("canvas");
+        sky.className = "city-sky";
+        sky.setAttribute("aria-hidden", "true");
+        row.prepend(sky);
+        pendingSkies.push({ sky, scene: sceneFor(b) });
+      }
+
       const mainBtn = row.querySelector(".city-main") as HTMLButtonElement;
       mainBtn.addEventListener("click", () => {
         root.classList.remove("open");
@@ -329,6 +342,8 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
 
       list.appendChild(row);
     }
+    // The canvases need to be in the document to be measured.
+    for (const p of pendingSkies) addMiniSky(p.sky, p.scene);
   };
 
   const renderSettings = (): void => {

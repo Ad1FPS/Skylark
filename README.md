@@ -28,7 +28,7 @@ All tiles:
 - Wind map: animated streamlines over a dark map for the next 24 hours, coloured by speed
 - Animated sky that follows the time of day: sun with a faint halo, moon, stars, clouds, rain (with droplets running down the tiles), snow, fog, lightning; optional 60 fps mode
 - Weather icons as line drawings or in colour
-- Saved cities with live local time and their own sky, search, and "Use my location" (IP based)
+- Saved cities with live local time and their own animated sky (drifting clouds, rain, snow, stars), search, and "Use my location" (IP based)
 - Units: C/F, km/h, mph, m/s, 12/24 h; optional start with Windows (launches into the tray)
 - Tray-resident: closing the window frees the webview (about 6 MB); the tray icon or a second launch brings it back, and the current location refreshes every 15 minutes in the background
 

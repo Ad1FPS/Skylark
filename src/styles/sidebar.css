@@ -107,6 +107,28 @@
   align-items: stretch;
 }
 
+.city {
+  overflow: hidden;
+}
+
+.city-sky {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.city-main {
+  position: relative;
+  z-index: 1;
+}
+
+.city-remove {
+  z-index: 2;
+}
+
 .city:hover {
   background: rgba(255, 255, 255, 0.08);
 }

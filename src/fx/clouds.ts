@@ -1,8 +1,8 @@
 import type { Layer, Scene } from "./types";
 import { clamp, lerp, rng } from "./util";
 
-const TONES = ["day", "night", "storm"] as const;
-type Tone = (typeof TONES)[number];
+export const TONES = ["day", "night", "storm"] as const;
+export type Tone = (typeof TONES)[number];
 
 /** Shaded base and lit top colour per tone, for puffy 3D clouds. */
 const TONE_RGB: Record<Tone, { shade: string; light: string }> = {
@@ -11,8 +11,8 @@ const TONE_RGB: Record<Tone, { shade: string; light: string }> = {
   storm: { shade: "28,33,48", light: "98,108,130" },
 };
 
-const SPRITE_W = 480;
-const SPRITE_H = 200;
+export const SPRITE_W = 480;
+export const SPRITE_H = 200;
 const COUNT = 18;
 /** Sprites are baked at this multiple of their drawn size so big windows do not just stretch a small bitmap. */
 const SPRITE_RES = 1.5;
@@ -20,7 +20,7 @@ const SPRITE_RES = 1.5;
 const SPRITES: Partial<Record<Tone, HTMLCanvasElement[]>> = {};
 
 /** Lazily build the 3 shapes x 3 tones sprite atlas once. */
-function sprites(tone: Tone): HTMLCanvasElement[] {
+export function sprites(tone: Tone): HTMLCanvasElement[] {
   const cached = SPRITES[tone];
   if (cached) return cached;
   const made: HTMLCanvasElement[] = [];
