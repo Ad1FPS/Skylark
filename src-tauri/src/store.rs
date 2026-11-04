@@ -106,6 +106,7 @@ mod tests {
             }),
             minutely: Vec::new(),
             detail: Default::default(),
+            week: Default::default(),
         }
     }
 

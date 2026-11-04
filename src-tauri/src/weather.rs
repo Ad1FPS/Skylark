@@ -36,6 +36,8 @@ pub struct WeatherBundle {
     pub minutely: Vec<Minute>,
     #[serde(default)]
     pub detail: Detail,
+    #[serde(default)]
+    pub week: Week,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -62,6 +64,17 @@ pub struct Detail {
     pub pressure: Vec<f32>,
     pub visibility: Vec<f32>,
     pub uv_index: Vec<f32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Week {
+    pub time: Vec<String>,
+    pub temperature: Vec<f32>,
+    pub apparent: Vec<f32>,
+    pub precipitation_probability: Vec<u8>,
+    pub weather_code: Vec<u8>,
+    pub is_day: Vec<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -409,6 +422,24 @@ fn build_detail(h: &RawHourly, current_time: &str) -> Detail {
     }
 }
 
+fn build_week(h: &RawHourly, current_time: &str) -> Week {
+    let start_key = day_key(current_time);
+    let start = h
+        .time
+        .iter()
+        .position(|t| day_key(t) == start_key)
+        .unwrap_or(0);
+    let end = h.time.len().min(start + 240);
+    Week {
+        time: h.time[start..end].to_vec(),
+        temperature: floats(&h.temperature_2m, start, end),
+        apparent: floats(&h.apparent_temperature, start, end),
+        precipitation_probability: (start..end).map(|i| idx(&h.precipitation_probability, i)).collect(),
+        weather_code: (start..end).map(|i| idx(&h.weather_code, i)).collect(),
+        is_day: (start..end).map(|i| idx(&h.is_day, i) != 0).collect(),
+    }
+}
+
 fn parse_hourly(raw: Option<&RawHourly>, current_time: &str) -> Vec<Hour> {
     let mut hourly = Vec::new();
     if let Some(h) = raw {
@@ -498,6 +529,11 @@ pub fn parse_forecast(json: &str, loc: &Location, air: Option<Air>, now: i64) ->
         .as_ref()
         .map(|h| build_detail(h, &current.time))
         .unwrap_or_default();
+    let week = raw
+        .hourly
+        .as_ref()
+        .map(|h| build_week(h, &current.time))
+        .unwrap_or_default();
 
     Ok(WeatherBundle {
         location: loc.clone(),
@@ -511,6 +547,7 @@ pub fn parse_forecast(json: &str, loc: &Location, air: Option<Air>, now: i64) ->
         air,
         minutely,
         detail,
+        week,
     })
 }
 
@@ -745,6 +782,19 @@ mod tests {
         assert_eq!(bundle.daily[0].wind_gusts_max, 47.5);
         assert!((bundle.daily[0].daylight_seconds - 34145.66).abs() < 0.5);
 
+        assert_eq!(bundle.week.time.len(), 240);
+        assert_eq!(bundle.week.time[0], "2026-11-04T00:00");
+        assert_eq!(bundle.week.temperature.len(), 240);
+        assert_eq!(bundle.week.apparent.len(), 240);
+        assert_eq!(bundle.week.precipitation_probability.len(), 240);
+        assert_eq!(bundle.week.weather_code.len(), 240);
+        assert_eq!(bundle.week.is_day.len(), 240);
+
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/fixtures/forecast.json")).expect("fixture");
+        let first_code = fixture["hourly"]["weather_code"][0].as_u64().expect("code") as u8;
+        assert_eq!(bundle.week.weather_code[0], first_code);
+
         let air = bundle.air.expect("air");
         assert_eq!(air.pm10, 13.4);
         assert_eq!(air.hourly.time.len(), 48);
@@ -765,6 +815,7 @@ mod tests {
         let mut value = serde_json::to_value(&bundle).expect("to value");
         if let Some(obj) = value.as_object_mut() {
             obj.remove("detail");
+            obj.remove("week");
             if let Some(air) = obj.get_mut("air").and_then(|a| a.as_object_mut()) {
                 air.remove("hourly");
             }
@@ -790,6 +841,7 @@ mod tests {
 
         let restored: WeatherBundle = serde_json::from_value(value).expect("deserialize");
         assert!(restored.detail.time.is_empty());
+        assert!(restored.week.time.is_empty());
     }
 
     #[test]

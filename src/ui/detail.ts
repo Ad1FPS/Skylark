@@ -4,6 +4,8 @@ import type { DetailContent } from "./detail-common";
 import { windView, precipitationView, humidityView, feelsView, pressureView, visibilityView } from "./detail-weather";
 import { uvView, airView, sunView } from "./detail-air-sun";
 import { dailyView, radarView } from "./detail-forecast";
+import type { PopoverHandle } from "./popover";
+import { openPopover } from "./popover";
 
 export type DetailKind =
   | "wind"
@@ -34,64 +36,32 @@ const VIEWS: Record<DetailKind, View> = {
   radar: radarView,
 };
 
-let overlay: HTMLElement | null = null;
-let restoreFocus: HTMLElement | null = null;
-let keyHandler: ((e: KeyboardEvent) => void) | null = null;
-
-function teardown(): void {
-  if (keyHandler) window.removeEventListener("keydown", keyHandler);
-  keyHandler = null;
-  overlay?.remove();
-  overlay = null;
-  restoreFocus?.focus();
-  restoreFocus = null;
-}
+let popover: PopoverHandle | null = null;
+let popoverAnchor: HTMLElement | null = null;
 
 export function closeDetail(): void {
-  if (!overlay) return;
-  teardown();
+  popover?.close();
 }
 
-export function openDetail(kind: DetailKind, b: WeatherBundle, s: Settings): void {
+export function openDetail(kind: DetailKind, b: WeatherBundle, s: Settings, anchor?: HTMLElement): void {
+  if (popover && (!anchor || popoverAnchor === anchor)) {
+    closeDetail();
+    return;
+  }
   const content = VIEWS[kind](b, s);
   if (!content) return;
   closeDetail();
 
-  restoreFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-
-  const root = document.createElement("div");
-  root.className = "detail-overlay";
-
-  const sheet = document.createElement("div");
-  sheet.className = "detail-sheet";
-
-  const head = document.createElement("div");
-  head.className = "detail-head";
-  head.innerHTML = `
-    <button class="detail-back" type="button"><span class="detail-chev">\u2039</span>Back</button>
-    <span class="detail-title-icon">${icon(content.icon, 15)}</span>
-    <h2 class="card-title">${content.title}</h2>
-  `;
-  const back = head.querySelector<HTMLButtonElement>(".detail-back");
-  back?.addEventListener("click", closeDetail);
-
-  const body = document.createElement("div");
-  body.className = "detail-body";
-  body.appendChild(content.body);
-
-  sheet.appendChild(head);
-  sheet.appendChild(body);
-  root.appendChild(sheet);
-
-  root.addEventListener("click", (e) => {
-    if (e.target === root) closeDetail();
+  const target = anchor ?? document.body;
+  popoverAnchor = target;
+  popover = openPopover({
+    anchor: target,
+    title: content.title,
+    iconHtml: icon(content.icon, 15),
+    body: content.body,
+    onClose: () => {
+      popover = null;
+      popoverAnchor = null;
+    },
   });
-  keyHandler = (e: KeyboardEvent): void => {
-    if (e.key === "Escape") closeDetail();
-  };
-  window.addEventListener("keydown", keyHandler);
-
-  document.body.appendChild(root);
-  overlay = root;
-  back?.focus();
 }

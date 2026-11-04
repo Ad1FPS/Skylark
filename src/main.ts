@@ -7,6 +7,7 @@ import "./styles/locate.css";
 import "./styles/fx.css";
 import "./styles/titlebar.css";
 import "./styles/detail.css";
+import "./styles/popover.css";
 import { createTitlebar } from "./ui/titlebar";
 import { openDetail, type DetailKind } from "./ui/detail";
 import type { Location, WeatherBundle } from "./types";
@@ -115,7 +116,7 @@ function renderMain(main: HTMLElement, b: WeatherBundle): void {
   for (const card of renderCards(b, state.settings)) grid.appendChild(card);
   grid.addEventListener("click", (e) => {
     const tile = (e.target as HTMLElement).closest<HTMLElement>("[data-detail]");
-    if (tile?.dataset.detail) openDetail(tile.dataset.detail as DetailKind, b, state.settings);
+    if (tile?.dataset.detail) openDetail(tile.dataset.detail as DetailKind, b, state.settings, tile);
   });
   main.appendChild(grid);
 }
