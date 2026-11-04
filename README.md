@@ -1,4 +1,4 @@
-# Skylark
+﻿# Skylark
 
 A lightweight weather app for Windows, inspired by the macOS Weather app. Lightweight first, modern UI second.
 
@@ -40,8 +40,8 @@ Rust checks: `cd src-tauri && cargo test && cargo clippy -- -D warnings`. Fronte
 ## Data sources
 
 - Weather, nowcast, air quality and geocoding: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0; the free API is for non-commercial use)
-- Radar: [RainViewer](https://www.rainviewer.com/)
-- Map tiles: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors
+- Radar: [LibreWXR](https://github.com/JoshuaKimsey/LibreWXR) (CC BY 4.0; national radar composites plus a 60 minute nowcast), with [RainViewer](https://www.rainviewer.com/) as fallback
+- Map tiles: Â© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors
 - IP location: [ipwho.is](https://ipwho.is/)
 
 ## License
