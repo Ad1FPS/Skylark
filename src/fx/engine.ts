@@ -3,6 +3,8 @@ import { createLayers } from "./layers";
 
 const MAX_PIXELS = 1_000_000;
 const MAX_FPS = 30;
+const SMOOTH_MAX_FPS = 60;
+const SNAP_FADE_MS = 180;
 const UNFOCUSED_FPS = 15;
 const SETTLE = 0.005;
 const QUALITY_STEPS = [1, 0.6, 0.35, 0.25];
@@ -42,6 +44,8 @@ export function createFx(parent: HTMLElement): Fx {
   const reduced = location.search.includes("still");
 
   let enabled = true;
+  let smooth = false;
+  let snapTimer = 0;
   let rendered = false;
   let raf = 0;
   let lastFrame = 0;
@@ -157,7 +161,9 @@ export function createFx(parent: HTMLElement): Fx {
       const f = layer.fps(current);
       if (f > wanted) wanted = f;
     }
-    if (wanted > MAX_FPS) wanted = MAX_FPS;
+    const cap = smooth ? SMOOTH_MAX_FPS : MAX_FPS;
+    if (smooth) wanted *= 2;
+    if (wanted > cap) wanted = cap;
     if (document.hasFocus && !document.hasFocus() && wanted > UNFOCUSED_FPS) wanted = UNFOCUSED_FPS;
     return wanted;
   }
@@ -226,9 +232,27 @@ export function createFx(parent: HTMLElement): Fx {
   resize();
 
   return {
-    setScene(scene: Scene): void {
+    setScene(scene: Scene, instant = false): void {
       Object.assign(target, scene);
-      if (!rendered) Object.assign(current, target);
+      window.clearTimeout(snapTimer);
+      if (!rendered || !instant) {
+        canvas.style.opacity = "";
+        if (!rendered) Object.assign(current, target);
+        lastFrame = 0;
+        wake();
+        return;
+      }
+      // A different place is not a weather change: fade out, jump to the new sky, fade back in.
+      canvas.style.opacity = "0";
+      snapTimer = window.setTimeout(() => {
+        Object.assign(current, target);
+        lastFrame = 0;
+        wake();
+        canvas.style.opacity = "";
+      }, SNAP_FADE_MS);
+    },
+    setSmooth(on: boolean): void {
+      smooth = on;
       lastFrame = 0;
       wake();
     },

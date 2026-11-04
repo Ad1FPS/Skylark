@@ -2,7 +2,7 @@ import type { Settings } from "./types";
 
 const KEY = "weather.settings";
 
-export const DEFAULT_SETTINGS: Settings = { temp: "c", wind: "kmh", clock: "24" };
+export const DEFAULT_SETTINGS: Settings = { temp: "c", wind: "kmh", clock: "24", fps: "30" };
 
 export function loadSettings(): Settings {
   try {

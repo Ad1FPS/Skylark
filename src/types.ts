@@ -115,4 +115,6 @@ export interface Settings {
   temp: "c" | "f";
   wind: "kmh" | "mph" | "ms";
   clock: "12" | "24";
+  /** Background animation frame rate cap. */
+  fps: "30" | "60";
 }

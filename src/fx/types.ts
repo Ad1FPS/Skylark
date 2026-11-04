@@ -55,8 +55,10 @@ export interface Layer {
 }
 
 export interface Fx {
-  /** Ease toward a new scene over about a second or two. */
-  setScene(scene: Scene): void;
+  /** Ease toward a new scene over about a second or two; `instant` fades out, jumps and fades back in (location switch). */
+  setScene(scene: Scene, instant?: boolean): void;
+  /** Smooth mode doubles each layer's frame rate, capped at 60 (default is capped at 30). */
+  setSmooth(on: boolean): void;
   /** Start or stop all rendering. Stopping also clears the canvas. */
   setEnabled(on: boolean): void;
 }

@@ -71,6 +71,7 @@ function setupShell(): { main: HTMLElement } {
 
   app.replaceChildren(sky, sidebar, main, createTitlebar());
   fx = createFx(sky);
+  fx.setSmooth(state.settings.fps === "60");
   return { main };
 }
 
@@ -87,11 +88,11 @@ function setSkyGradient(grad: string): void {
   skyFront = 1 - skyFront;
 }
 
-function applySky(bundle: WeatherBundle): void {
+function applySky(bundle: WeatherBundle, instant = false): void {
   const c = bundle.current;
   setSkyGradient(skyGradient(describe(c.weatherCode, c.isDay).kind, c.isDay));
   // The scene changes with wind and rain intensity even when the gradient does not.
-  fx?.setScene(sceneFor(bundle));
+  fx?.setScene(sceneFor(bundle), instant);
 }
 
 function renderMain(main: HTMLElement, b: WeatherBundle): void {
@@ -141,6 +142,8 @@ async function selectLocation(loc: Location): Promise<void> {
   const main = currentMain ?? document.getElementById("main");
   if (!main) return;
 
+  const prev = state.bundle?.location;
+  let snap = !!prev && (prev.latitude !== loc.latitude || prev.longitude !== loc.longitude);
   set({ current: loc, loading: true, error: null });
   setCurrentLocation(loc).catch(() => {});
 
@@ -148,7 +151,8 @@ async function selectLocation(loc: Location): Promise<void> {
     const cached = await getCached(loc);
     if (cached) {
       set({ bundle: cached });
-      applySky(cached);
+      applySky(cached, snap);
+      snap = false;
       renderMain(main, cached);
     } else if (!state.bundle) {
       renderPlaceholder(main, "Loading weather\u2026");
@@ -160,7 +164,7 @@ async function selectLocation(loc: Location): Promise<void> {
   try {
     const b = await getWeather(loc, false);
     set({ bundle: b, loading: false });
-    applySky(b);
+    applySky(b, snap);
     renderMain(main, b);
   } catch (err) {
     set({ loading: false, error: String(err) });
@@ -250,6 +254,7 @@ async function init(): Promise<void> {
 
   // Re-render on unit changes without refetching.
   subscribe((s) => {
+    fx?.setSmooth(s.settings.fps === "60");
     if (s.bundle && s.settings) {
       const m = currentMain;
       if (m && m.querySelector("#grid")) renderMain(m, s.bundle);

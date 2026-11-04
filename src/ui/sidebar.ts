@@ -341,6 +341,10 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       { label: "24h", value: "24", active: s.clock === "24" },
       { label: "12h", value: "12", active: s.clock === "12" },
     ], (v) => update({ ...state.settings, clock: v as Settings["clock"] })));
+    settingsBox.appendChild(segmented([
+      { label: "30 fps", value: "30", active: s.fps === "30" },
+      { label: "60 fps", value: "60", active: s.fps === "60" },
+    ], (v) => update({ ...state.settings, fps: v as Settings["fps"] })));
   };
 
   interface Seg { label: string; value: string; active: boolean; }
