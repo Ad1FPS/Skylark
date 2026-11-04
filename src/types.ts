@@ -131,4 +131,6 @@ export interface Settings {
   fps: "30" | "60";
   /** Radar source: "auto" tries each provider in order. */
   radar: "auto" | "librewxr" | "rainviewer";
+  /** Condition icons: line drawings or coloured artwork. */
+  icons: "mono" | "color";
 }

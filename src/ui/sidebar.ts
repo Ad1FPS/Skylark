@@ -351,6 +351,13 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       { label: "30 fps", value: "30", active: s.fps === "30" },
       { label: "60 fps", value: "60", active: s.fps === "60" },
     ], (v) => update({ ...state.settings, fps: v as Settings["fps"] })));
+    const iconLabel = document.createElement("div");
+    iconLabel.className = "side-setting-label";
+    iconLabel.textContent = "Weather icons";
+    settingsBox.append(iconLabel, segmented([
+      { label: "Mono", value: "mono", active: s.icons === "mono" },
+      { label: "Color", value: "color", active: s.icons === "color" },
+    ], (v) => update({ ...state.settings, icons: v as Settings["icons"] })));
     // Only offered inside the real app; the browser preview has no autostart plugin.
     if (autostart !== null) {
       const label = document.createElement("div");

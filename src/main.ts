@@ -34,6 +34,7 @@ import { renderNowcast } from "./ui/nowcast";
 import { initSidebar } from "./ui/sidebar";
 import { createFx } from "./fx/engine";
 import { createGlass, type Glass } from "./fx/glass";
+import { setIconStyle } from "./icons";
 import { sceneFor, sceneForCode } from "./scene";
 import type { Fx } from "./fx/types";
 
@@ -78,6 +79,7 @@ function setupShell(): { main: HTMLElement } {
 
   app.replaceChildren(sky, sidebar, main, createTitlebar());
   fx = createFx(sky);
+  setIconStyle(state.settings.icons);
   fx.setSmooth(state.settings.fps === "60");
   glass = createGlass();
   glass.setSmooth(state.settings.fps === "60");
@@ -267,6 +269,8 @@ async function init(): Promise<void> {
 
   // Re-render on unit changes without refetching.
   subscribe((s) => {
+    // Must run before the re-render below so every icon picks up the new style.
+    setIconStyle(s.settings.icons);
     fx?.setSmooth(s.settings.fps === "60");
     glass?.setSmooth(s.settings.fps === "60");
     if (s.bundle && s.settings) {

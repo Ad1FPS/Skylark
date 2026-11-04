@@ -69,7 +69,61 @@ export function icon(name: IconName, size = 24): string {
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" ${ATTR} aria-hidden="true">${PATHS[name]}</svg>`;
 }
 
+
+/* ---------- coloured condition icons (the "Color" option; "Mono" keeps the line icons above) ---------- */
+
+export type IconStyle = "mono" | "color";
+let iconStyle: IconStyle = "color";
+
+export function setIconStyle(style: IconStyle): void {
+  iconStyle = style;
+}
+
+const GRADS =
+  '<defs><linearGradient id="ic-cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d5e6"/></linearGradient>' +
+  '<linearGradient id="ic-cloud-dark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfd8e6"/><stop offset="1" stop-color="#8f9db3"/></linearGradient>' +
+  '<linearGradient id="ic-sun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe680"/><stop offset="1" stop-color="#ffb000"/></linearGradient></defs>';
+
+const CLOUD_RAIN = "M7 13h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 7 3 3 0 0 0 7 13Z";
+const CLOUD_BIG = "M7 18h10a4 4 0 0 0 .5-8A5.5 5.5 0 0 0 7 11a3.5 3.5 0 0 0 0 7Z";
+const CLOUD_PART = "M17 18h-8a3 3 0 0 1 0-6 4 4 0 0 1 7.5 1.2A2.8 2.8 0 0 1 17 18Z";
+const MOON_BIG = "M20 14a8 8 0 0 1-10-10 8 8 0 1 0 10 10Z";
+const MOON_SMALL = "M15 8a5 5 0 0 1-6-6 5 5 0 1 0 6 6Z";
+const RAYS = 'stroke="#ffc21a" stroke-width="1.8" stroke-linecap="round" fill="none"';
+
+function cloud(d: string, dark = false): string {
+  return `<path d="${d}" fill="url(#ic-${dark ? "cloud-dark" : "cloud"})" stroke="rgba(120,140,170,.55)" stroke-width=".6" stroke-linejoin="round"/>`;
+}
+
+function colorArt(kind: Kind, isDay: boolean): string {
+  switch (kind) {
+    case "clear":
+      return isDay
+        ? `<circle cx="12" cy="12" r="4.4" fill="url(#ic-sun)"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4" ${RAYS}/>`
+        : `<path d="${MOON_BIG}" fill="#f6f2dc"/>`;
+    case "partly":
+      return isDay
+        ? `<circle cx="8" cy="8" r="3.2" fill="url(#ic-sun)"/><path d="M8 2v1.5M2 8h1.5M3.6 3.6l1 1M12.4 3.6l-1 1" ${RAYS}/>${cloud(CLOUD_PART)}`
+        : `<path d="${MOON_SMALL}" fill="#f6f2dc"/>${cloud(CLOUD_PART)}`;
+    case "cloudy":
+      return cloud(CLOUD_BIG);
+    case "fog":
+      return `${cloud("M6 10h10a3 3 0 0 0 0-6 4.5 4.5 0 0 0-8.7 1")}<path d="M4 14h16M4 18h16" stroke="#aebbcf" stroke-width="1.8" stroke-linecap="round" fill="none"/>`;
+    case "drizzle":
+      return `${cloud(CLOUD_RAIN)}<path d="M8 16l-1 2M12 16l-1 2M16 16l-1 2" stroke="#7fd0ff" stroke-width="1.8" stroke-linecap="round" fill="none"/>`;
+    case "rain":
+      return `${cloud(CLOUD_RAIN, true)}<path d="M8 16v3M12 16v3M16 16v3" stroke="#4db6ff" stroke-width="1.9" stroke-linecap="round" fill="none"/>`;
+    case "snow":
+      return `${cloud(CLOUD_RAIN)}<circle cx="8" cy="17" r="1.3" fill="#bfe3ff"/><circle cx="12" cy="19.5" r="1.3" fill="#bfe3ff"/><circle cx="16" cy="17" r="1.3" fill="#bfe3ff"/><circle cx="12" cy="15.8" r="1.1" fill="#dff0ff"/>`;
+    case "storm":
+      return `${cloud("M7 12h9a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 7.2 6 3 3 0 0 0 7 12Z", true)}<path d="M13.5 13l-3.5 5h3l-1.5 4 5-6.2h-3l1.5-2.8Z" fill="#ffd23f" stroke="#e6a800" stroke-width=".5" stroke-linejoin="round"/>`;
+  }
+}
+
 export function conditionIcon(kind: Kind, isDay: boolean, size = 24): string {
+  if (iconStyle === "color") {
+    return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${GRADS}${colorArt(kind, isDay)}</svg>`;
+  }
   switch (kind) {
     case "clear":
       return icon(isDay ? "clear-day" : "clear-night", size);
