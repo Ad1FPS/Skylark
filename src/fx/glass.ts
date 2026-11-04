@@ -2,15 +2,15 @@ import type { Scene } from "./types";
 import { clamp, lerp, rng } from "./util";
 
 const MAX_PIXELS = 2_100_000;
-const MAX_DPR = 1.5;
+const MAX_DPR = 1.25;
 const MAX_FPS = 30;
-const SMOOTH_FPS = 60;
+const SMOOTH_FPS = 40;
 const UNFOCUSED_FPS = 15;
 const ACTIVE_RAIN = 0.02;
 const FADE_OUT = 3;
 const TILES_REFRESH_MS = 250;
 const RESIZE_DEBOUNCE_MS = 120;
-const BEAD_CAP = 260;
+const BEAD_CAP = 200;
 const BEAD_DENSITY = 2400;
 const BEAD_MIN_R = 1.2;
 const BEAD_MAX_R = 2.2;
@@ -77,6 +77,42 @@ interface Splash {
   age: number;
   ttl: number;
   sparks: Spark[];
+}
+
+const SPRITE_SCALE = 2;
+const beadSprites = new Map<number, HTMLCanvasElement>();
+
+/** One pre-drawn bead per quarter-pixel radius: a faint lens disc, a dark lower rim and a bright specular dot. */
+function beadSprite(r: number): HTMLCanvasElement {
+  const cached = beadSprites.get(r);
+  if (cached) return cached;
+  const size = Math.ceil((r * 2 + 4) * SPRITE_SCALE);
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const g = c.getContext("2d");
+  if (g) {
+    g.scale(SPRITE_SCALE, SPRITE_SCALE);
+    const m = size / SPRITE_SCALE / 2;
+    const grad = g.createRadialGradient(m, m, 0, m, m, r);
+    grad.addColorStop(0, "rgba(255,255,255,0.07)");
+    grad.addColorStop(1, "rgba(255,255,255,0.26)");
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(m, m, r, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = "rgba(0,0,0,0.36)";
+    g.lineWidth = Math.max(0.6, r * 0.18);
+    g.beginPath();
+    g.arc(m, m, r * 0.85, 0.15 * Math.PI, 0.85 * Math.PI);
+    g.stroke();
+    g.fillStyle = "rgba(255,255,255,0.8)";
+    g.beginPath();
+    g.arc(m - r * 0.3, m - r * 0.3, r * 0.28, 0, Math.PI * 2);
+    g.fill();
+  }
+  beadSprites.set(r, c);
+  return c;
 }
 
 export function createGlass(): Glass {
@@ -362,25 +398,11 @@ export function createGlass(): Glass {
       const y = t.rect.top + b.y;
       const r = b.r;
 
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(255,255,255,${0.07 * fade})`);
-      grad.addColorStop(1, `rgba(255,255,255,${0.26 * fade})`);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = `rgba(0,0,0,${0.36 * fade})`;
-      ctx.lineWidth = Math.max(0.6, r * 0.18);
-      ctx.beginPath();
-      ctx.arc(x, y, r * 0.85, 0.15 * Math.PI, 0.85 * Math.PI);
-      ctx.stroke();
-
-      ctx.fillStyle = `rgba(255,255,255,${0.8 * fade})`;
-      ctx.beginPath();
-      ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.28, 0, Math.PI * 2);
-      ctx.fill();
+      const sp = beadSprite(Math.max(1, Math.round(r * 4) / 4));
+      ctx.globalAlpha = fade;
+      ctx.drawImage(sp, x - sp.width / (2 * SPRITE_SCALE), y - sp.height / (2 * SPRITE_SCALE), sp.width / SPRITE_SCALE, sp.height / SPRITE_SCALE);
     }
+    ctx.globalAlpha = 1;
 
     // Splash ripples and sparks.
     for (const sp of splashes) {
