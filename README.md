@@ -16,6 +16,10 @@ Built with Tauri 2 (WebView2), a Rust backend and a vanilla TypeScript + plain C
 |---|---|
 | ![Day popover](screenshots/popover-day.jpg) | ![Expanded radar](screenshots/radar-expanded.jpg) |
 
+All tiles:
+
+![All tiles](screenshots/all-tiles.jpg)
+
 ## Features
 
 - Current conditions, hourly strip (switch between conditions, chance of rain and wind), 10-day forecast, 15-minute rain nowcast
@@ -48,6 +52,12 @@ Rust checks: `cd src-tauri && cargo test && cargo clippy -- -D warnings`. Fronte
 - Radar: [LibreWXR](https://github.com/JoshuaKimsey/LibreWXR) (CC BY 4.0; national radar composites plus a 60 minute nowcast), with [RainViewer](https://www.rainviewer.com/) as fallback
 - Map tiles: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors
 - IP location: [ipwho.is](https://ipwho.is/)
+
+## Contributors
+
+- [Ad1FPS](https://github.com/Ad1FPS): author, design direction and testing
+- [Claude](https://claude.com/claude-code) (Anthropic): planning, architecture, code review and much of the implementation
+- [DeepSeek](https://www.deepseek.com/): bulk code generation, from specs written and reviewed by Claude
 
 ## License
 
