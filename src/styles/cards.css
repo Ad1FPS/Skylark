@@ -124,15 +124,23 @@
 }
 
 /* Feels Like: actual temperature and the offset slider */
+.feels-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .feels-actual {
   font-size: 12px;
   color: var(--text-2);
+  white-space: nowrap;
 }
 
 .feels-track {
   position: relative;
   height: 6px;
-  margin: 8px 14px 10px;
+  margin: 6px 14px 8px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.22);
 }

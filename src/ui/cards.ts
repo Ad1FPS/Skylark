@@ -257,8 +257,10 @@ function feelsCard(b: WeatherBundle, s: Settings): HTMLElement {
   const pos = Math.max(0, Math.min(100, 50 + (diff / 8) * 50));
   const label = shown > 0 ? `+${shown}\u00B0` : `${shown}\u00B0`;
   body.innerHTML = `
-    <div class="value">${esc(tempDeg(b.current.apparent, s))}</div>
-    <div class="feels-actual">Actual: ${esc(tempDeg(b.current.temperature, s))}</div>
+    <div class="feels-head">
+      <div class="value">${esc(tempDeg(b.current.apparent, s))}</div>
+      <div class="feels-actual">Actual: ${esc(tempDeg(b.current.temperature, s))}</div>
+    </div>
     <div class="feels-track" aria-hidden="true"><span class="feels-pill${diff < -0.5 ? " cold" : diff > 0.5 ? " warm" : ""}" style="left:${pos.toFixed(1)}%">${esc(label)}</span></div>
     <div class="sentence">${esc(sentence)}</div>
   `;
