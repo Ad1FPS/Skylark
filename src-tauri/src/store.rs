@@ -97,9 +97,15 @@ mod tests {
                 uv_index_max: 0.8,
                 sunrise: "2026-11-03T06:57".into(),
                 sunset: "2026-11-03T16:30".into(),
+                ..Default::default()
             }],
-            air: Some(Air { us_aqi: 26, pm2_5: 4.8 }),
+            air: Some(Air {
+                us_aqi: 26,
+                pm2_5: 4.8,
+                ..Default::default()
+            }),
             minutely: Vec::new(),
+            detail: Default::default(),
         }
     }
 
