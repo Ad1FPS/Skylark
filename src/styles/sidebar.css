@@ -263,7 +263,7 @@
 
 @media (max-width: 899px) {
   #app {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .sidebar {
     position: fixed;

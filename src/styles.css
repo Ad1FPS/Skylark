@@ -42,7 +42,7 @@ body {
   position: relative;
   height: 100vh;
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: 232px minmax(0, 1fr);
 }
 
 .sky {
