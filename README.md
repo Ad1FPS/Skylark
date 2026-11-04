@@ -4,9 +4,13 @@ A lightweight weather app for Windows, inspired by the macOS Weather app. Lightw
 
 Built with Tauri 2 (WebView2), a Rust backend and a vanilla TypeScript + plain CSS frontend (Vite). No UI framework.
 
-| Clear day | Rain at night | Storm |
+![Clear day](screenshots/clear-day.jpg)
+
+![Rain at night](screenshots/rain-night.jpg)
+
+| Clear night | Snow | Thunderstorm |
 |---|---|---|
-| ![Clear day](screenshots/clear-day.jpg) | ![Rain at night](screenshots/rain-night.jpg) | ![Storm](screenshots/storm-night.jpg) |
+| ![Clear night](screenshots/clear-night.jpg) | ![Snow](screenshots/snow-day.jpg) | ![Thunderstorm](screenshots/storm-night.jpg) |
 
 ## Features
 
