@@ -1,6 +1,6 @@
 import type { Settings, WeatherBundle } from "../types";
 import { describe, skyGradient } from "../theme";
-import { esc, hourLabel, temp, tempDeg } from "../format";
+import { clock, esc, temp, tempDeg } from "../format";
 import { conditionIcon } from "../icons";
 
 export function renderHero(b: WeatherBundle, s: Settings): HTMLElement {
@@ -19,7 +19,7 @@ export function renderHero(b: WeatherBundle, s: Settings): HTMLElement {
     summary += ` Rain in ${wetIdx * 15} min.`;
   } else {
     const wetHour = b.hourly.find((h) => (h.precipitationProbability ?? 0) >= 40);
-    if (wetHour) summary += ` Rain likely around ${hourLabel(wetHour.time, s)}.`;
+    if (wetHour) summary += ` Rain likely around ${clock(wetHour.time, s)}.`;
   }
 
   const stale = b.stale
@@ -34,7 +34,8 @@ export function renderHero(b: WeatherBundle, s: Settings): HTMLElement {
   wrap.className = "hero";
   wrap.dataset.sky = skyGradient(cond.kind, c.isDay);
   wrap.innerHTML = `
-    <div class="hero-city">${location}${sub ? `<small>${sub}</small>` : ""}</div>
+    <div class="hero-city">${location}</div>
+    ${sub ? `<div class="hero-meta">${sub}</div>` : ""}
     <div class="hero-temp">${temp(c.temperature, s)}<sup>&deg;</sup></div>
     <div class="hero-cond">${conditionIcon(cond.kind, c.isDay, 30)} ${esc(cond.label)}</div>
     <div class="hero-hl">${hl}</div>

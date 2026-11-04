@@ -1,5 +1,6 @@
 .info {
-  min-height: 150px;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -67,20 +68,24 @@
 }
 
 /* Sun */
-.sun-times {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: var(--text-2);
-}
-
-.sun-times svg {
-  vertical-align: -2px;
+.sun-chart {
+  position: relative;
+  margin-top: auto;
 }
 
 .sun-arc {
-  margin-top: 4px;
   display: block;
+  overflow: visible;
+}
+
+.sun-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22), 0 0 10px rgba(255, 255, 255, 0.6);
+  transform: translate(-50%, -50%);
 }
 
 /* Wind */

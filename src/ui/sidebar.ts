@@ -1,9 +1,9 @@
 import type { Location, Settings, WeatherBundle } from "../types";
 import { state, set, subscribe } from "../state";
 import { searchCity, saveLocation, removeLocation, getWeather, getCached, locateIp } from "../api";
-import { esc, saveSettings, tempDeg } from "../format";
+import { esc, localClock, saveSettings, temp, tempDeg } from "../format";
 import { describe } from "../theme";
-import { conditionIcon, icon } from "../icons";
+import { icon } from "../icons";
 
 const cache = new Map<string, WeatherBundle>();
 const fetching = new Set<string>();
@@ -219,6 +219,37 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
     }
   };
 
+  let menu: HTMLElement | null = null;
+  const closeMenu = (): void => {
+    menu?.remove();
+    menu = null;
+  };
+  document.addEventListener("click", closeMenu);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+  window.addEventListener("blur", closeMenu);
+
+  const showMenu = (x: number, y: number, items: { label: string; run: () => void }[]): void => {
+    closeMenu();
+    const m = document.createElement("div");
+    m.className = "ctx-menu";
+    for (const it of items) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = it.label;
+      btn.addEventListener("click", () => {
+        closeMenu();
+        it.run();
+      });
+      m.appendChild(btn);
+    }
+    document.body.appendChild(m);
+    m.style.left = `${Math.min(x, window.innerWidth - m.offsetWidth - 8)}px`;
+    m.style.top = `${Math.min(y, window.innerHeight - m.offsetHeight - 8)}px`;
+    menu = m;
+  };
+
   const renderList = (): void => {
     const saved = state.saved;
     ensureTemps(saved);
@@ -239,14 +270,22 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       const cond = b ? describe(b.current.weatherCode, b.current.isDay) : null;
       const tempTxt = b ? tempDeg(b.current.temperature, state.settings) : "\u2013";
 
+      const day = b?.daily[0];
+      const hl = day ? `H:${temp(day.tempMax, state.settings)}° L:${temp(day.tempMin, state.settings)}°` : "";
+      const offset = b ? b.utcOffsetSeconds : null;
       row.innerHTML = `
         <button class="city-main" type="button">
-          <span class="city-icon">${cond ? conditionIcon(cond.kind, b!.current.isDay, 20) : ""}</span>
           <span class="city-text">
-            <span class="city-name">${esc(loc.name)}</span>
-            <span class="city-sub">${esc(secondary(loc))}</span>
+            <span class="city-top">
+              <span class="city-name">${esc(loc.name)}</span>
+              <span class="city-temp">${esc(tempTxt)}</span>
+            </span>
+            <span class="city-time"${offset !== null ? ` data-offset="${offset}"` : ""}>${offset !== null ? esc(localClock(offset, state.settings)) : esc(secondary(loc))}</span>
+            <span class="city-bottom">
+              <span class="city-cond">${esc(cond ? cond.label : "")}</span>
+              <span class="city-hl">${esc(hl)}</span>
+            </span>
           </span>
-          <span class="city-temp">${esc(tempTxt)}</span>
         </button>
         <button class="city-remove" type="button" aria-label="Remove">${icon("close", 12)}</button>
       `;
@@ -257,9 +296,7 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
         onSelect(loc);
       });
 
-      const removeBtn = row.querySelector(".city-remove") as HTMLButtonElement;
-      removeBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
+      const remove = (): void => {
         void (async () => {
           try {
             const updated = await removeLocation(loc.latitude, loc.longitude);
@@ -271,6 +308,17 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
             /* ignore */
           }
         })();
+      };
+
+      const removeBtn = row.querySelector(".city-remove") as HTMLButtonElement;
+      removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        remove();
+      });
+
+      row.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        showMenu(e.clientX, e.clientY, [{ label: `Remove ${loc.name}`, run: remove }]);
       });
 
       list.appendChild(row);
@@ -312,11 +360,9 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
 
   let lastSettings = state.settings;
   const update = (s: Settings): void => {
-    lastSettings = s;
     set({ settings: s });
     saveSettings(s);
   };
-  void lastSettings;
 
   subscribe((s) => {
     if (s.saved !== undefined) renderList();
@@ -328,4 +374,10 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
 
   renderList();
   renderSettings();
+
+  window.setInterval(() => {
+    for (const el of list.querySelectorAll<HTMLElement>(".city-time[data-offset]")) {
+      el.textContent = localClock(Number(el.dataset.offset), state.settings);
+    }
+  }, 15000);
 }

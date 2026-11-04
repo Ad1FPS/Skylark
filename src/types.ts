@@ -41,11 +41,53 @@ export interface Day {
   uvIndexMax: number;
   sunrise: string;
   sunset: string;
+  windSpeedMax: number;
+  windGustsMax: number;
+  apparentMax: number;
+  apparentMin: number;
+  daylightSeconds: number;
+  sunshineSeconds: number;
+  precipitationHours: number;
+}
+
+/** Parallel arrays, 48 hourly steps from 00:00 of the location's current day. */
+export interface Detail {
+  time: string[];
+  temperature: number[];
+  apparent: number[];
+  humidity: number[];
+  dewPoint: number[];
+  precipitation: number[];
+  precipitationProbability: number[];
+  cloudCover: number[];
+  windSpeed: number[];
+  windGusts: number[];
+  windDirection: number[];
+  pressure: number[];
+  visibility: number[];
+  uvIndex: number[];
+}
+
+export interface AirHourly {
+  time: string[];
+  usAqi: number[];
+  pm25: number[];
+  pm10: number[];
+  ozone: number[];
+  no2: number[];
+  so2: number[];
+  co: number[];
 }
 
 export interface Air {
   usAqi: number;
   pm25: number;
+  pm10: number;
+  ozone: number;
+  no2: number;
+  so2: number;
+  co: number;
+  hourly: AirHourly;
 }
 
 /** One 15-minute step of the point precipitation forecast (mm in that step). */
@@ -62,6 +104,8 @@ export interface WeatherBundle {
   utcOffsetSeconds: number;
   current: Current;
   minutely: Minute[];
+  /** Empty for bundles cached before this field existed. */
+  detail: Detail;
   hourly: Hour[];
   daily: Day[];
   air: Air | null;

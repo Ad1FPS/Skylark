@@ -98,20 +98,25 @@ main {
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 .hero-city {
   font-size: 28px;
   font-weight: 600;
   line-height: 1.1;
 }
-.hero-city small {
-  display: block;
-  font-size: 12px;
+.hero-meta {
+  margin-top: 2px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-2);
 }
+.hero-meta .dot {
+  margin: 0 8px;
+  opacity: 0.6;
+}
 .hero-temp {
+  margin-top: 6px;
   font-family: var(--font-display);
   font-size: 96px;
   font-weight: 200;
@@ -238,15 +243,29 @@ main {
 }
 
 .grid {
+  --row: 76px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-auto-rows: var(--row);
+  grid-auto-flow: dense;
   gap: var(--gap);
 }
 .span-2 {
   grid-column: span 2;
 }
 .row-2 {
+  grid-row: span 6;
+}
+.radar {
+  grid-row: span 7;
+}
+/* Small tiles are two rows tall and pack under the tall ones, as in the macOS app. */
+.card.info {
   grid-row: span 2;
+}
+.card.info:has(.wind),
+.card.info:has(.gauge-arc) {
+  grid-row: span 3;
 }
 
 .loading,
@@ -287,4 +306,28 @@ main {
     transition: none !important;
     animation: none !important;
   }
+}
+.hour-sun-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.hour-col.is-sun .hour-label {
+  color: var(--text);
+}
+.card-aside {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+.hour-col.is-now::before {
+  content: "";
+  position: absolute;
+  inset: -6px -2px -4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  z-index: -1;
 }

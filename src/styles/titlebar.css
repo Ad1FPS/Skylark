@@ -1,0 +1,60 @@
+:root {
+  --tb: 32px;
+}
+
+.titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--tb);
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.titlebar-controls {
+  display: flex;
+}
+
+.titlebar-btn {
+  width: 46px;
+  height: var(--tb);
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-2, rgba(255, 255, 255, 0.75));
+  cursor: default;
+}
+
+.titlebar-btn svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.titlebar-btn.close:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+.sidebar {
+  padding-top: calc(var(--tb) + 6px);
+}
+
+main {
+  padding-top: calc(var(--tb) + 6px);
+}
+
+@media (max-width: 899px) {
+  main {
+    padding-top: 56px;
+  }
+}

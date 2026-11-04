@@ -1,5 +1,5 @@
 import type { Settings, WeatherBundle } from "../types";
-import { compass, esc, tempDeg, tempColor, clock } from "../format";
+import { compass, esc, tempDeg, tempColor, clock, localClock } from "../format";
 import { icon } from "../icons";
 
 const AQI_STOPS: Array<[number, string]> = [
@@ -38,7 +38,7 @@ function makeCard(title: string, iconName: Parameters<typeof icon>[0], extra = "
   return card;
 }
 
-function aqiCategory(aqi: number): string {
+export function aqiCategory(aqi: number): string {
   if (aqi <= 50) return "Good";
   if (aqi <= 100) return "Moderate";
   if (aqi <= 150) return "Unhealthy for sensitive";
@@ -47,7 +47,7 @@ function aqiCategory(aqi: number): string {
   return "Hazardous";
 }
 
-function aqiSentence(aqi: number): string {
+export function aqiSentence(aqi: number): string {
   if (aqi <= 50) return "Air quality is satisfactory today.";
   if (aqi <= 100) return "Air quality is acceptable; sensitive people should take care.";
   if (aqi <= 150) return "Sensitive groups may feel effects from the air.";
@@ -56,7 +56,7 @@ function aqiSentence(aqi: number): string {
   return "Health warning: hazardous air.";
 }
 
-function uvCategory(uv: number): string {
+export function uvCategory(uv: number): string {
   if (uv <= 2) return "Low";
   if (uv <= 5) return "Moderate";
   if (uv <= 7) return "High";
@@ -64,7 +64,7 @@ function uvCategory(uv: number): string {
   return "Extreme";
 }
 
-function rampBar(gradient: string, pos: number): string {
+export function rampBar(gradient: string, pos: number): string {
   const pct = Math.max(0, Math.min(100, pos * 100));
   return `<div class="ramp"><div class="ramp-fill" style="background:${gradient}"></div><div class="ramp-dot" style="left:${pct}%"></div></div>`;
 }
@@ -108,32 +108,58 @@ function timeParts(iso: string): number {
 
 function sunCard(b: WeatherBundle, s: Settings): HTMLElement {
   const day = b.daily[0];
-  const card = makeCard("Sun", "sun");
-  const body = document.createElement("div");
-  body.className = "info-body";
   const rise = day ? timeParts(day.sunrise) : 0;
   const set = day ? timeParts(day.sunset) : 0;
   const now = timeParts(b.current.time);
-  let t = (now - rise) / (set - rise || 1);
-  const dimmed = t < 0 || t > 1;
-  t = Math.max(0, Math.min(1, t));
-
+  // Before sunset the next event is sunset (shown big); after it, the coming sunrise.
+  const upcoming = now < rise ? "sunrise" : now < set ? "sunset" : "sunrise";
+  const card = makeCard(upcoming === "sunset" ? "Sunset" : "Sunrise", upcoming);
+  const aside = document.createElement("span");
+  aside.className = "card-aside";
+  aside.textContent = localClock(b.utcOffsetSeconds, s);
+  card.querySelector(".card-title")?.appendChild(aside);
+  const tick = window.setInterval(() => {
+    if (!aside.isConnected) window.clearInterval(tick);
+    else aside.textContent = localClock(b.utcOffsetSeconds, s);
+  }, 15000);
+  const body = document.createElement("div");
+  body.className = "info-body";
+  // A 24 h sine: above the horizon between sunrise and sunset, below it overnight.
   const w = 180;
-  const h = 60;
-  const cx = w * t;
-  const cy = h - Math.sin(Math.PI * t) * (h - 8);
-  const dot = dimmed ? `style="opacity:.4"` : "";
+  const h = 40;
+  const horizon = h * 0.52;
+  const nightLen = rise + 1440 - set || 1;
+  const yAt = (m: number): number => {
+    if (m >= rise && m <= set) return horizon - Math.sin((Math.PI * (m - rise)) / (set - rise || 1)) * (horizon - 4);
+    const p = ((m >= set ? m - set : m + 1440 - set) / nightLen) * Math.PI;
+    return horizon + Math.sin(p) * (h - horizon - 4);
+  };
+  const xAt = (m: number): number => (m / 1440) * w;
+  let dayPath = "";
+  let nightPath = "";
+  for (let m = 0; m <= 1440; m += 10) {
+    const pt = `${xAt(m).toFixed(1)} ${yAt(m).toFixed(1)}`;
+    if (m >= rise && m <= set) dayPath += `${dayPath ? "L" : "M"}${pt} `;
+    else nightPath += `${m === 0 || (m - 10 >= rise && m - 10 <= set) ? "M" : "L"}${pt} `;
+  }
+  const cx = xAt(now);
+  const cy = yAt(now);
+
+  const main = day ? clock(upcoming === "sunset" ? day.sunset : day.sunrise, s) : "--";
+  const other = day ? clock(upcoming === "sunset" ? day.sunrise : day.sunset, s) : "--";
+  const otherLabel = upcoming === "sunset" ? "Sunrise" : "Sunset";
 
   body.innerHTML = `
-    <div class="sun-times">
-      <span>${icon("sunrise", 14)} ${esc(day ? clock(day.sunrise, s) : "--")}</span>
-      <span>${icon("sunset", 14)} ${esc(day ? clock(day.sunset, s) : "--")}</span>
-    </div>
-    <svg class="sun-arc" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" aria-hidden="true">
-      <path d="M0 ${h - 1} Q ${w / 2} ${-h + 12} ${w} ${h - 1}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5" stroke-dasharray="4 4"/>
-      <line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="rgba(255,255,255,.28)" stroke-width="1"/>
-      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5" fill="#fff" ${dot}/>
+    <div class="value">${esc(main)}</div>
+    <div class="sun-chart">
+    <svg class="sun-arc" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${nightPath}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="1.6"/>
+      <path d="${dayPath}" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.6"/>
+      <line x1="0" y1="${horizon}" x2="${w}" y2="${horizon}" stroke="rgba(255,255,255,.4)" stroke-width="1"/>
     </svg>
+    <div class="sun-dot" style="left:${((cx / w) * 100).toFixed(2)}%;top:${cy.toFixed(1)}px"></div>
+    </div>
+    <div class="sentence">${otherLabel}: ${esc(other)}</div>
   `;
   card.appendChild(body);
   return card;
@@ -295,17 +321,23 @@ function pressureCard(b: WeatherBundle): HTMLElement {
   return card;
 }
 
+/** Marks a tile as clickable; main.ts opens the matching detail view. */
+function tag(card: HTMLElement, kind: string): HTMLElement {
+  card.dataset.detail = kind;
+  return card;
+}
+
 export function renderCards(b: WeatherBundle, s: Settings): HTMLElement[] {
   const out: HTMLElement[] = [];
-  if (b.air) out.push(airCard(b));
-  out.push(uvCard(b));
-  out.push(sunCard(b, s));
-  out.push(windCard(b, s));
-  out.push(precipCard(b));
-  out.push(feelsCard(b, s));
-  out.push(humidityCard(b, s));
-  out.push(visibilityCard(b));
-  out.push(pressureCard(b));
+  if (b.air) out.push(tag(airCard(b), "air"));
+  out.push(tag(uvCard(b), "uv"));
+  out.push(tag(sunCard(b, s), "sun"));
+  out.push(tag(windCard(b, s), "wind"));
+  out.push(tag(precipCard(b), "precipitation"));
+  out.push(tag(feelsCard(b, s), "feels"));
+  out.push(tag(humidityCard(b, s), "humidity"));
+  out.push(tag(visibilityCard(b), "visibility"));
+  out.push(tag(pressureCard(b), "pressure"));
   return out;
 }
 

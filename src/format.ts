@@ -74,11 +74,20 @@ function hour12(h: number, m: number): string {
 export function hourLabel(iso: string, s: Settings): string {
   const { h } = parseLocal(iso);
   if (s.clock === "12") return hour12(h, 0);
-  return String(h);
+  return String(h).padStart(2, "0");
 }
 
 export function clock(iso: string, s: Settings): string {
   const { h, m } = parseLocal(iso);
+  if (s.clock === "12") return hour12(h, m);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** Wall-clock time at a place, given its UTC offset in seconds. */
+export function localClock(offsetSeconds: number, s: Settings): string {
+  const d = new Date(Date.now() + offsetSeconds * 1000);
+  const h = d.getUTCHours();
+  const m = d.getUTCMinutes();
   if (s.clock === "12") return hour12(h, m);
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }

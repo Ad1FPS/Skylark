@@ -101,7 +101,7 @@
 
 .city {
   position: relative;
-  height: 56px;
+  height: 76px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: stretch;
@@ -291,4 +291,84 @@
   .sidebar-toggle {
     display: none;
   }
+}
+
+.ctx-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 160px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: rgba(24, 28, 44, 0.96);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.ctx-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: default;
+}
+
+.ctx-menu button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.city-remove {
+  width: 22px;
+  height: 22px;
+}
+
+.city:hover .city-remove {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.city-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.city-top .city-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.city-top .city-temp {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.city-time {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.city-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.city-cond {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.city-hl {
+  white-space: nowrap;
 }
