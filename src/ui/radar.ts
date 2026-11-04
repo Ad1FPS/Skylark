@@ -1,25 +1,12 @@
 import type { WeatherBundle } from "../types";
 import { esc } from "../format";
 import { icon } from "../icons";
+import { loadRadar, type RadarSource } from "../radar/providers";
 
-const FRAMES_URL = "https://api.rainviewer.com/public/weather-maps.json";
-const RAIN_HOST_TILE = 256;
 const TILE = 256;
-const MIN_Z = 3;
-const MAX_Z = 7;
 const DEFAULT_Z = 6;
 const MAX_LAT = 80;
 const RADAR_OPACITY = 0.8;
-
-interface RadarFrame {
-  time: number;
-  path: string;
-}
-
-interface RadarMeta {
-  host: string;
-  frames: RadarFrame[];
-}
 
 interface View {
   center: { lat: number; lon: number };
@@ -64,10 +51,6 @@ function baseTileUrl(z: number, x: number, y: number): string {
   return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
 }
 
-function radarTileUrl(host: string, path: string, z: number, x: number, y: number): string {
-  return `${host}${path}/${RAIN_HOST_TILE}/${z}/${x}/${y}/2/1_1.png`;
-}
-
 /* ---------- time label ---------- */
 
 function pad2(n: number): string {
@@ -79,11 +62,11 @@ function clockLabel(unix: number, offset: number): string {
   return `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
 }
 
-function frameLabel(frameTime: number, newestTime: number, offset: number): string {
+function frameLabel(frameTime: number, nowTime: number, offset: number): string {
   const base = clockLabel(frameTime, offset);
-  if (frameTime === newestTime) return `${base} (now)`;
-  const diffMin = Math.round((newestTime - frameTime) / 60);
-  return `${base}  -${diffMin} min`;
+  if (frameTime === nowTime) return `${base} (now)`;
+  const diffMin = Math.round((frameTime - nowTime) / 60);
+  return `${base}  ${diffMin > 0 ? "+" : "\u2212"}${Math.abs(diffMin)} min`;
 }
 
 /* ---------- main render ---------- */
@@ -190,9 +173,9 @@ interface StartArgs {
 
 async function startRadar(args: StartArgs): Promise<void> {
   const { b, map, playBtn, slider, timeLabel, isDisposed } = args;
-  const meta = await loadMeta();
+  const loaded = await loadRadar(b.location.latitude, b.location.longitude);
   if (isDisposed()) return;
-  if (!meta) {
+  if (!loaded) {
     const msg = document.createElement("div");
     msg.className = "radar-loading";
     msg.textContent = "Radar unavailable";
@@ -200,30 +183,14 @@ async function startRadar(args: StartArgs): Promise<void> {
     return;
   }
 
-  const engine = createEngine({ b, map, meta, playBtn, slider, timeLabel, isDisposed });
+  const engine = createEngine({ b, map, source: loaded.source, playBtn, slider, timeLabel, isDisposed });
   engine.start();
   // Expose to renderRadar for pause-on-offscreen via a property on the card.
   (map as unknown as { _radarOwner: RadarOwner })._radarOwner = engine;
 }
 
-async function loadMeta(): Promise<RadarMeta | null> {
-  try {
-    const res = await fetch(FRAMES_URL);
-    if (!res.ok) return null;
-    const json = (await res.json()) as {
-      host?: string;
-      radar?: { past?: RadarFrame[] };
-    };
-    const past = json.radar?.past ?? [];
-    if (!json.host || past.length === 0) return null;
-    return { host: json.host, frames: past.slice().sort((a, b) => a.time - b.time) };
-  } catch {
-    return null;
-  }
-}
-
 interface EngineArgs extends StartArgs {
-  meta: RadarMeta;
+  source: RadarSource;
 }
 
 interface Engine extends RadarOwner {
@@ -231,10 +198,13 @@ interface Engine extends RadarOwner {
 }
 
 function createEngine(a: EngineArgs): Engine {
-  const { b, map, meta, playBtn, slider, timeLabel, isDisposed } = a;
-  const frames = meta.frames;
-  const newestIdx = frames.length - 1;
-  slider.max = String(newestIdx);
+  const { b, map, source, playBtn, slider, timeLabel, isDisposed } = a;
+  const frames = source.frames;
+  const newestIdx = source.nowIdx;
+  const lastIdx = frames.length - 1;
+  const MIN_Z = source.minZoom;
+  const MAX_Z = source.maxZoom;
+  slider.max = String(lastIdx);
 
   const view: View = {
     center: { lat: clampLat(b.location.latitude), lon: b.location.longitude },
@@ -262,7 +232,7 @@ function createEngine(a: EngineArgs): Engine {
 
   const attribution = document.createElement("div");
   attribution.className = "radar-attrib";
-  attribution.textContent = "\u00A9 OpenStreetMap contributors \u00B7 Radar by RainViewer";
+  attribution.textContent = `\u00A9 OpenStreetMap contributors \u00B7 ${source.attribution}`;
   map.appendChild(attribution);
 
   // Current frame.
@@ -343,6 +313,9 @@ function createEngine(a: EngineArgs): Engine {
       const url = radarUrl(k.z, wx, k.y);
       if (img.dataset.url !== url) {
         img.dataset.url = url;
+        img.dataset.z = String(k.z);
+        img.dataset.x = String(wx);
+        img.dataset.y = String(k.y);
         img.src = url;
         loadedUrls.add(url);
       }
@@ -357,7 +330,7 @@ function createEngine(a: EngineArgs): Engine {
   }
 
   function radarUrl(z: number, x: number, y: number): string {
-    return radarTileUrl(meta.host, frames[frameIdx].path, z, x, y);
+    return frames[frameIdx].url(z, x, y);
   }
 
   function place(img: HTMLImageElement, px: number, py: number): void {
@@ -405,12 +378,8 @@ function createEngine(a: EngineArgs): Engine {
     slider.value = String(idx);
     timeLabel.textContent = frameLabel(frames[idx].time, frames[newestIdx].time, b.utcOffsetSeconds);
     for (const img of radarTiles.values()) {
-      const m = /(\d+)\/(\d+)\/(\d+)$/.exec(img.dataset.url ?? "");
-      if (!m) continue;
-      const z = parseInt(m[1], 10);
-      const x = parseInt(m[2], 10);
-      const y = parseInt(m[3], 10);
-      const url = radarUrl(z, x, y);
+      if (img.dataset.z === undefined) continue;
+      const url = radarUrl(Number(img.dataset.z), Number(img.dataset.x), Number(img.dataset.y));
       if (img.getAttribute("src") !== url) img.src = url;
     }
     // URL keys stored in loadedUrls reflect the currently displayed frame only.
@@ -431,7 +400,7 @@ function createEngine(a: EngineArgs): Engine {
       if (i === frameIdx) continue;
       for (const k of keys) {
         const wx = ((k.x % maxTile) + maxTile) % maxTile;
-        const url = radarTileUrl(meta.host, frames[i].path, k.z, wx, k.y);
+        const url = frames[i].url(k.z, wx, k.y);
         if (loadedUrls.has(url)) continue;
         loadedUrls.add(url);
         const im = new Image();
@@ -463,22 +432,19 @@ function createEngine(a: EngineArgs): Engine {
       setPlaying(false);
       return;
     }
-    const isNewest = frameIdx === newestIdx;
-    let next: number;
-    if (isNewest) next = 0;
-    else next = frameIdx + 1;
+    const next = frameIdx >= lastIdx ? 0 : frameIdx + 1;
     applyFrame(next);
-    const delay = next === newestIdx ? 1500 : 700;
+    const delay = next === lastIdx ? 1500 : 700;
     timer = window.setTimeout(tick, delay);
   }
 
   function startPlayback(): void {
     preloadAllFrames();
     setPlaying(true);
-    // If currently on newest, show oldest first then advance.
-    const next = frameIdx === newestIdx ? 0 : frameIdx;
+    // If currently on the last frame, start again from the oldest.
+    const next = frameIdx >= lastIdx ? 0 : frameIdx;
     applyFrame(next);
-    const delay = next === newestIdx ? 1500 : 700;
+    const delay = next === lastIdx ? 1500 : 700;
     clearTimer();
     timer = window.setTimeout(tick, delay);
   }
@@ -489,7 +455,7 @@ function createEngine(a: EngineArgs): Engine {
   });
 
   slider.addEventListener("input", () => {
-    const idx = Math.max(0, Math.min(newestIdx, parseInt(slider.value, 10) || 0));
+    const idx = Math.max(0, Math.min(lastIdx, parseInt(slider.value, 10) || 0));
     applyFrame(idx);
   });
 
