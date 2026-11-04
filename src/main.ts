@@ -24,6 +24,7 @@ import {
   saveLocation,
   locateIp,
   setCurrentLocation,
+  setKeepAlive,
 } from "./api";
 import { state, set, subscribe } from "./state";
 import { renderHero } from "./ui/hero";
@@ -88,6 +89,33 @@ function setupShell(): { main: HTMLElement } {
 }
 
 /** Crossfade to a new sky gradient; a no-op when it is already showing. */
+let lastKeepAlive: string | null = null;
+
+/**
+ * Lets the backend mark the page hidden or visible when it hides or shows the window.
+ * Everything animated already pauses on `document.hidden` and `visibilitychange`.
+ */
+function installHiddenOverride(): void {
+  const real = Object.getOwnPropertyDescriptor(Document.prototype, "hidden")?.get;
+  let forced = false;
+  try {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => forced || (real ? real.call(document) === true : false),
+    });
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => (forced || (real ? real.call(document) === true : false) ? "hidden" : "visible"),
+    });
+  } catch {
+    return;
+  }
+  (window as unknown as { __skylarkVisible: (v: boolean) => void }).__skylarkVisible = (v) => {
+    forced = !v;
+    document.dispatchEvent(new Event("visibilitychange"));
+  };
+}
+
 function setSkyGradient(grad: string): void {
   const back = skyEls[1 - skyFront];
   const front = skyEls[skyFront];
@@ -268,10 +296,18 @@ async function init(): Promise<void> {
     })();
   };
 
+  // Hiding the window to the tray (Keep ready mode) does not make WebView2 report the page as hidden,
+  // so the backend tells us, and every animation that watches document.hidden pauses.
+  installHiddenOverride();
+
   // Re-render on unit changes without refetching.
   subscribe((s) => {
     // Must run before the re-render below so every icon picks up the new style.
     setIconStyle(s.settings.icons);
+    if (s.settings.keepAlive !== lastKeepAlive) {
+      lastKeepAlive = s.settings.keepAlive;
+      void setKeepAlive(lastKeepAlive === "on");
+    }
     fx?.setSmooth(s.settings.fps === "60");
     glass?.setSmooth(s.settings.fps === "60");
     if (s.bundle && s.settings) {

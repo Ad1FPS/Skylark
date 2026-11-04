@@ -374,6 +374,14 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       { label: "Color", value: "color", active: s.icons === "color" },
     ], (v) => update({ ...state.settings, icons: v as Settings["icons"] })));
     // Only offered inside the real app; the browser preview has no autostart plugin.
+    const keepLabel = document.createElement("div");
+    keepLabel.className = "side-setting-label";
+    keepLabel.textContent = "Keep ready when closed";
+    keepLabel.title = "On: closing the window only hides it, so it reopens instantly but about 110 MB stays in use. Off: the window is freed (about 6 MB) and takes a moment to reopen.";
+    settingsBox.append(keepLabel, segmented([
+      { label: "Off", value: "off", active: s.keepAlive === "off" },
+      { label: "On", value: "on", active: s.keepAlive === "on" },
+    ], (v) => update({ ...state.settings, keepAlive: v as Settings["keepAlive"] })));
     if (autostart !== null) {
       const label = document.createElement("div");
       label.className = "side-setting-label";

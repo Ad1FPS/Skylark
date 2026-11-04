@@ -6,6 +6,7 @@ mod weather;
 mod wind;
 
 use commands::Http;
+use tauri::Manager;
 
 /// Passed by the autostart entry so a login launch goes straight to the tray.
 const MINIMIZED_FLAG: &str = "--minimized";
@@ -32,9 +33,20 @@ pub fn run() {
             commands::save_location,
             commands::remove_location,
             commands::set_current_location,
+            commands::set_keep_alive,
             climate::get_normal,
             wind::get_wind_grid,
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == "main"
+                && commands::KEEP_ALIVE.load(std::sync::atomic::Ordering::Relaxed)
+            {
+                api.prevent_close();
+                let _ = window.hide();
+                tray::notify_visible(window.app_handle(), false);
+            }
+        })
         .setup(|app| {
             tray::setup(app.handle())?;
             tray::start_background_refresh(app.handle());

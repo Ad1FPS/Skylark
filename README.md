@@ -30,7 +30,7 @@ All tiles:
 - Weather icons as line drawings or in colour
 - Saved cities with live local time and their own animated sky (drifting clouds, rain, snow, stars), search, and "Use my location" (IP based)
 - Units: C/F, km/h, mph, m/s, 12/24 h; optional start with Windows (launches into the tray)
-- Tray-resident: closing the window frees the webview (about 6 MB); the tray icon or a second launch brings it back, and the current location refreshes every 15 minutes in the background
+- Tray-resident: closing the window frees the webview (about 6 MB); the tray icon or a second launch brings it back, and the current location refreshes every 15 minutes in the background. "Keep ready when closed" hides the window instead, so it reopens instantly at the cost of about 110 MB
 
 The release exe is about 5 MB; the installer is about 1.6 MB.
 

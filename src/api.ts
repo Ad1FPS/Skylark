@@ -69,3 +69,12 @@ export async function getWindGrid(
     return null;
   }
 }
+
+/** Tells the backend whether closing the window should only hide it. */
+export async function setKeepAlive(on: boolean): Promise<void> {
+  try {
+    await invoke<void>("set_keep_alive", { on });
+  } catch {
+    /* not running inside the app */
+  }
+}

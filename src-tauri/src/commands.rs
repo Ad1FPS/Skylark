@@ -10,6 +10,14 @@ use crate::weather::{self, Location, WeatherBundle};
 const CACHE_TTL_SECS: i64 = 600;
 const CURRENT_FILE: &str = "current.json";
 
+/// When set, closing the window only hides it, so it reopens instantly (the webview stays in memory).
+pub static KEEP_ALIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[tauri::command]
+pub fn set_keep_alive(on: bool) {
+    KEEP_ALIVE.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
 pub struct Http(pub reqwest::Client);
 
 impl Http {

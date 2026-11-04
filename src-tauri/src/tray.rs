@@ -49,11 +49,19 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Tells the page it is hidden or shown again, so its animations pause while the window sits in the tray.
+pub fn notify_visible(app: &AppHandle, visible: bool) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.eval(format!("window.__skylarkVisible && window.__skylarkVisible({visible})"));
+    }
+}
+
 pub fn show_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
         let _ = window.set_focus();
+        notify_visible(app, true);
         return;
     }
     if let Some(cfg) = app.config().app.windows.first()
