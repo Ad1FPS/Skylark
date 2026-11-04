@@ -379,3 +379,18 @@
   font-size: 11px;
   color: var(--text-3);
 }
+
+/* City rows show their own sky; the active row gets a ring instead of a lighter fill. */
+.city.has-sky,
+.city.has-sky:hover,
+.city.has-sky.active {
+  background-color: transparent;
+}
+
+.city.has-sky:hover {
+  filter: brightness(1.1);
+}
+
+.city.has-sky.active {
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.65);
+}

@@ -2,7 +2,7 @@ import type { Location, Settings, WeatherBundle } from "../types";
 import { state, set, subscribe } from "../state";
 import { searchCity, saveLocation, removeLocation, getWeather, getCached, locateIp } from "../api";
 import { esc, localClock, saveSettings, temp, tempDeg } from "../format";
-import { describe } from "../theme";
+import { describe, skyGradient } from "../theme";
 import { icon } from "../icons";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 
@@ -270,6 +270,11 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       const b = cache.get(key(loc));
       const cond = b ? describe(b.current.weatherCode, b.current.isDay) : null;
       const tempTxt = b ? tempDeg(b.current.temperature, state.settings) : "\u2013";
+      // Each row wears its own city's sky, like the macOS sidebar.
+      if (b && cond) {
+        row.style.backgroundImage = `linear-gradient(rgba(8,16,36,.2), rgba(8,16,36,.2)), ${skyGradient(cond.kind, b.current.isDay)}`;
+        row.classList.add("has-sky");
+      }
 
       const day = b?.daily[0];
       const hl = day ? `H:${temp(day.tempMax, state.settings)}° L:${temp(day.tempMin, state.settings)}°` : "";
