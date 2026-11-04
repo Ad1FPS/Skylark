@@ -117,4 +117,6 @@ export interface Settings {
   clock: "12" | "24";
   /** Background animation frame rate cap. */
   fps: "30" | "60";
+  /** Radar source: "auto" tries each provider in order. */
+  radar: "auto" | "librewxr" | "rainviewer";
 }

@@ -103,8 +103,11 @@ export const PROVIDERS: RadarProvider[] = [librewxr, rainviewer];
 export async function loadRadar(
   lat: number,
   lon: number,
+  pick: ProviderId | "auto" = "auto",
 ): Promise<{ source: RadarSource; provider: RadarProvider } | null> {
-  for (const provider of PROVIDERS.filter((p) => p.covers(lat, lon))) {
+  // A deliberate pick is honoured as is, with no silent fallback.
+  const candidates = pick === "auto" ? PROVIDERS.filter((p) => p.covers(lat, lon)) : PROVIDERS.filter((p) => p.id === pick);
+  for (const provider of candidates) {
     const source = await provider.load();
     if (source) return { source, provider };
   }

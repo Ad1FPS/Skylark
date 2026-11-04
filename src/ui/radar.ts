@@ -1,7 +1,8 @@
-import type { WeatherBundle } from "../types";
-import { esc } from "../format";
+import type { Settings, WeatherBundle } from "../types";
+import { esc, saveSettings } from "../format";
+import { state, set } from "../state";
 import { icon } from "../icons";
-import { loadRadar, type RadarSource } from "../radar/providers";
+import { loadRadar, PROVIDERS, type RadarSource } from "../radar/providers";
 
 const TILE = 256;
 const DEFAULT_Z = 6;
@@ -71,13 +72,33 @@ function frameLabel(frameTime: number, nowTime: number, offset: number): string 
 
 /* ---------- main render ---------- */
 
-export function renderRadar(b: WeatherBundle): HTMLElement {
+export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
   const card = document.createElement("section");
   card.className = "card radar span-2";
 
   const title = document.createElement("h2");
   title.className = "card-title";
   title.innerHTML = `${icon("drop", 13)}<span>${esc("RADAR")}</span>`;
+  const picker = document.createElement("select");
+  picker.className = "radar-source";
+  picker.setAttribute("aria-label", "Radar source");
+  const choices: [Settings["radar"], string][] = [
+    ["auto", "Auto"],
+    ...PROVIDERS.map((p): [Settings["radar"], string] => [p.id, p.name]),
+  ];
+  for (const [value, label] of choices) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    picker.appendChild(opt);
+  }
+  picker.value = settings.radar;
+  picker.addEventListener("change", () => {
+    const next = { ...state.settings, radar: picker.value as Settings["radar"] };
+    set({ settings: next });
+    saveSettings(next);
+  });
+  title.appendChild(picker);
   card.appendChild(title);
 
   const map = document.createElement("div");
@@ -115,7 +136,21 @@ export function renderRadar(b: WeatherBundle): HTMLElement {
     if (started || disposed) return;
     started = true;
     placeholder.remove();
-    void startRadar({ b, map, playBtn, slider, timeLabel, isDisposed: () => disposed });
+    void startRadar({
+      b,
+      card,
+      map,
+      playBtn,
+      slider,
+      timeLabel,
+      pick: settings.radar,
+      onProvider: (name) => {
+        // In Auto mode, show which provider actually answered.
+        const auto = picker.querySelector<HTMLOptionElement>('option[value="auto"]');
+        if (auto) auto.textContent = settings.radar === "auto" && name ? `Auto \u00B7 ${name}` : "Auto";
+      },
+      isDisposed: () => disposed,
+    });
   };
 
   const io = new IntersectionObserver(
@@ -126,18 +161,16 @@ export function renderRadar(b: WeatherBundle): HTMLElement {
       }
       for (const e of entries) {
         if (e.isIntersecting) init();
-        else if (started) owner?.pause();
+        else if (started) ownerOf(map)?.pause();
       }
     },
     { rootMargin: "200px" },
   );
 
-  let owner: RadarOwner | null = null;
   const cleanup = () => {
     disposed = true;
     io.disconnect();
-    owner?.dispose();
-    owner = null;
+    ownerOf(map)?.dispose();
   };
 
   // Attach the observer once the element is in the document.
@@ -147,12 +180,11 @@ export function renderRadar(b: WeatherBundle): HTMLElement {
   };
   requestAnimationFrame(attach);
 
-  void startRadar; // owner assigned by startRadar via callback below
-  const startOrig = startRadar;
-  // Rebind startRadar's owner notification:
-  void startOrig;
-
   return card;
+}
+
+function ownerOf(map: HTMLElement): RadarOwner | undefined {
+  return (map as unknown as { _radarOwner?: RadarOwner })._radarOwner;
 }
 
 interface RadarOwner {
@@ -162,7 +194,10 @@ interface RadarOwner {
 
 interface StartArgs {
   b: WeatherBundle;
+  card: HTMLElement;
   map: HTMLElement;
+  pick: Settings["radar"];
+  onProvider: (name: string | null) => void;
   playBtn: HTMLButtonElement;
   slider: HTMLInputElement;
   timeLabel: HTMLElement;
@@ -172,18 +207,33 @@ interface StartArgs {
 /* ---------- radar engine ---------- */
 
 async function startRadar(args: StartArgs): Promise<void> {
-  const { b, map, playBtn, slider, timeLabel, isDisposed } = args;
-  const loaded = await loadRadar(b.location.latitude, b.location.longitude);
+  const { b, card, map, pick, onProvider, isDisposed } = args;
+  const loaded = await loadRadar(b.location.latitude, b.location.longitude, pick);
   if (isDisposed()) return;
   if (!loaded) {
+    onProvider(null);
+    card.classList.add("radar-off");
+    const who = pick === "auto" ? "Radar" : (PROVIDERS.find((p) => p.id === pick)?.name ?? "Radar");
     const msg = document.createElement("div");
-    msg.className = "radar-loading";
-    msg.textContent = "Radar unavailable";
+    msg.className = "radar-loading radar-unavailable";
+    const text = document.createElement("span");
+    text.textContent = pick === "auto" ? "Radar is unavailable right now." : `${who} is not responding.`;
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "radar-retry";
+    retry.textContent = "Retry";
+    retry.addEventListener("click", () => {
+      msg.remove();
+      card.classList.remove("radar-off");
+      void startRadar(args);
+    });
+    msg.append(text, retry);
     map.appendChild(msg);
     return;
   }
+  onProvider(loaded.provider.name);
 
-  const engine = createEngine({ b, map, source: loaded.source, playBtn, slider, timeLabel, isDisposed });
+  const engine = createEngine({ ...args, source: loaded.source });
   engine.start();
   // Expose to renderRadar for pause-on-offscreen via a property on the card.
   (map as unknown as { _radarOwner: RadarOwner })._radarOwner = engine;
@@ -229,6 +279,11 @@ function createEngine(a: EngineArgs): Engine {
   const zout = zoomButton("\u2212", "Zoom out");
   zoomBox.append(zin, zout);
   map.appendChild(zoomBox);
+
+  const badge = document.createElement("div");
+  badge.className = "radar-badge";
+  badge.textContent = "FORECAST";
+  map.appendChild(badge);
 
   const attribution = document.createElement("div");
   attribution.className = "radar-attrib";
@@ -377,6 +432,7 @@ function createEngine(a: EngineArgs): Engine {
     frameIdx = idx;
     slider.value = String(idx);
     timeLabel.textContent = frameLabel(frames[idx].time, frames[newestIdx].time, b.utcOffsetSeconds);
+    badge.classList.toggle("show", idx > newestIdx);
     for (const img of radarTiles.values()) {
       if (img.dataset.z === undefined) continue;
       const url = radarUrl(Number(img.dataset.z), Number(img.dataset.x), Number(img.dataset.y));
