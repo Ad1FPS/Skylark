@@ -331,3 +331,59 @@ main {
   background: rgba(255, 255, 255, 0.14);
   z-index: -1;
 }
+
+/* hourly card mode switch */
+.hourly-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hourly-modes {
+  display: inline-flex;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+}
+
+.hourly-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 22px;
+  color: var(--text-2);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.hourly-mode.active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.hour-metric {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px;
+}
+
+.hour-metric small {
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.hour-drop {
+  display: flex;
+  justify-content: center;
+  color: #7cc4ff;
+}
+
+.hour-arrow {
+  display: block;
+  margin: 3px auto;
+}

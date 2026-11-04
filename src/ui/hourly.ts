@@ -1,11 +1,22 @@
 import type { Settings, WeatherBundle } from "../types";
 import { describe } from "../theme";
-import { clock, hourLabel, temp } from "../format";
+import { clock, hourLabel, temp, wind } from "../format";
 import { conditionIcon, icon } from "../icons";
 
 const COL_W = 56;
 const GAP = 4;
 const SPARK_H = 40;
+
+type Mode = "conditions" | "precip" | "wind";
+
+/** Kept across re-renders (unit changes rebuild the card). */
+let mode: Mode = "conditions";
+
+const MODES: { id: Mode; label: string; icon: "cloudy" | "drop" | "wind" }[] = [
+  { id: "conditions", label: "Conditions", icon: "cloudy" },
+  { id: "precip", label: "Chance of precipitation", icon: "drop" },
+  { id: "wind", label: "Wind", icon: "wind" },
+];
 
 type Item =
   | { kind: "hour"; index: number }
@@ -38,10 +49,35 @@ export function renderHourly(b: WeatherBundle, s: Settings): HTMLElement {
   card.dataset.detail = "day";
   card.dataset.day = "0";
 
+  const head = document.createElement("div");
+  head.className = "hourly-head";
   const title = document.createElement("h2");
   title.className = "card-title";
   title.textContent = "HOURLY FORECAST";
-  card.appendChild(title);
+  const modes = document.createElement("div");
+  modes.className = "hourly-modes";
+  for (const m of MODES) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `hourly-mode${m.id === mode ? " active" : ""}`;
+    btn.setAttribute("aria-label", m.label);
+    btn.setAttribute("aria-pressed", String(m.id === mode));
+    btn.innerHTML = icon(m.icon, 14);
+    btn.addEventListener("click", (e) => {
+      // The card itself opens the day popover; the mode buttons must not.
+      e.stopPropagation();
+      if (m.id === mode) return;
+      mode = m.id;
+      const keep = card.querySelector<HTMLElement>(".hourly-scroll")?.scrollLeft ?? 0;
+      const fresh = renderHourly(b, s);
+      card.replaceWith(fresh);
+      const sc = fresh.querySelector<HTMLElement>(".hourly-scroll");
+      if (sc) sc.scrollLeft = keep;
+    });
+    modes.appendChild(btn);
+  }
+  head.append(title, modes);
+  card.appendChild(head);
 
   const scroll = document.createElement("div");
   scroll.className = "hourly-scroll";
@@ -60,12 +96,32 @@ export function renderHourly(b: WeatherBundle, s: Settings): HTMLElement {
       const rain = (h.precipitationProbability ?? 0) >= 20
         ? `<div class="hour-rain">${h.precipitationProbability}%</div>`
         : `<div class="hour-rain"></div>`;
-      col.innerHTML = `
+      if (mode === "conditions") {
+        col.innerHTML = `
         <div class="hour-label">${label}</div>
         ${conditionIcon(cond.kind, h.isDay, 28)}
         <div class="hour-temp">${temp(h.temperature, s)}&deg;</div>
         ${rain}
       `;
+      } else if (mode === "precip") {
+        const p = h.precipitationProbability ?? 0;
+        col.innerHTML = `
+        <div class="hour-label">${label}</div>
+        <span class="hour-drop" style="opacity:${(0.35 + 0.65 * (p / 100)).toFixed(2)}">${icon("drop", 24)}</span>
+        <div class="hour-temp hour-metric">${p}<small>%</small></div>
+        <div class="hour-rain"></div>
+      `;
+      } else {
+        const at = b.detail.time.indexOf(h.time);
+        const w = at >= 0 ? wind(b.detail.windSpeed[at], s) : null;
+        const dir = at >= 0 ? b.detail.windDirection[at] : 0;
+        col.innerHTML = `
+        <div class="hour-label">${label}</div>
+        <svg class="hour-arrow" viewBox="0 0 12 12" width="22" height="22" aria-hidden="true" style="transform:rotate(${dir + 180}deg)"><path d="M6 1 L9 10 L6 7.5 L3 10 Z" fill="rgba(255,255,255,.85)"/></svg>
+        <div class="hour-temp hour-metric">${w ? w.value : "&ndash;"}<small>${w ? w.unit : ""}</small></div>
+        <div class="hour-rain"></div>
+      `;
+      }
       temps.push(h.temperature);
     } else {
       col.className = "hour-col is-sun";
@@ -85,6 +141,7 @@ export function renderHourly(b: WeatherBundle, s: Settings): HTMLElement {
   const svgWrap = document.createElement("div");
   svgWrap.className = "hourly-spark";
   svgWrap.style.height = `${SPARK_H}px`;
+  if (mode !== "conditions") svgWrap.style.display = "none";
   scroll.insertBefore(svgWrap, scroll.firstChild);
 
   // Columns stretch to fill a wide card and keep their minimum width (then scroll) in a narrow one.
