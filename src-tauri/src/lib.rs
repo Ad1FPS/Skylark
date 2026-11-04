@@ -5,6 +5,9 @@ mod weather;
 
 use commands::Http;
 
+/// Passed by the autostart entry so a login launch goes straight to the tray.
+const MINIMIZED_FLAG: &str = "--minimized";
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -13,6 +16,10 @@ pub fn run() {
             tray::show_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![MINIMIZED_FLAG]),
+        ))
         .manage(Http::new())
         .invoke_handler(tauri::generate_handler![
             commands::search_city,
@@ -27,6 +34,10 @@ pub fn run() {
         .setup(|app| {
             tray::setup(app.handle())?;
             tray::start_background_refresh(app.handle());
+            // The window is created here, not by the config, so a login launch can stay in the tray.
+            if !std::env::args().any(|a| a == MINIMIZED_FLAG) {
+                tray::show_window(app.handle());
+            }
             Ok(())
         })
         .build(tauri::generate_context!())

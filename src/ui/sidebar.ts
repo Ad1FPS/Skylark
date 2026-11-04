@@ -4,6 +4,7 @@ import { searchCity, saveLocation, removeLocation, getWeather, getCached, locate
 import { esc, localClock, saveSettings, temp, tempDeg } from "../format";
 import { describe } from "../theme";
 import { icon } from "../icons";
+import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 const cache = new Map<string, WeatherBundle>();
 const fetching = new Set<string>();
@@ -345,7 +346,37 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       { label: "30 fps", value: "30", active: s.fps === "30" },
       { label: "60 fps", value: "60", active: s.fps === "60" },
     ], (v) => update({ ...state.settings, fps: v as Settings["fps"] })));
+    // Only offered inside the real app; the browser preview has no autostart plugin.
+    if (autostart !== null) {
+      const label = document.createElement("div");
+      label.className = "side-setting-label";
+      label.textContent = "Start with Windows";
+      settingsBox.append(label, segmented([
+        { label: "Off", value: "off", active: !autostart },
+        { label: "On", value: "on", active: autostart },
+      ], (v) => void setAutostart(v === "on")));
+    }
   };
+
+  let autostart: boolean | null = null;
+  const setAutostart = async (on: boolean): Promise<void> => {
+    try {
+      if (on) await enable();
+      else await disable();
+      autostart = (await isEnabled()) === true;
+    } catch {
+      /* keep the previous state */
+    }
+    renderSettings();
+  };
+  void isEnabled()
+    .then((v) => {
+      if (typeof v === "boolean") {
+        autostart = v;
+        renderSettings();
+      }
+    })
+    .catch(() => {});
 
   interface Seg { label: string; value: string; active: boolean; }
   const segmented = (items: Seg[], onPick: (v: string) => void): HTMLElement => {

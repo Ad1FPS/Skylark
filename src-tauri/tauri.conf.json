@@ -14,6 +14,7 @@
     "windows": [
       {
         "title": "Skylark",
+        "create": false,
         "decorations": false,
         "width": 1000,
         "height": 720

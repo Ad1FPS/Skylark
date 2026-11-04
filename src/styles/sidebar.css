@@ -372,3 +372,9 @@
 .city-hl {
   white-space: nowrap;
 }
+
+.side-setting-label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+}
