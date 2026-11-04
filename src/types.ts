@@ -68,6 +68,16 @@ export interface Detail {
   uvIndex: number[];
 }
 
+/** Parallel arrays, 240 hourly steps from 00:00 of the current local day (24 per day). */
+export interface Week {
+  time: string[];
+  temperature: number[];
+  apparent: number[];
+  precipitationProbability: number[];
+  weatherCode: number[];
+  isDay: boolean[];
+}
+
 export interface AirHourly {
   time: string[];
   usAqi: number[];
@@ -106,6 +116,8 @@ export interface WeatherBundle {
   minutely: Minute[];
   /** Empty for bundles cached before this field existed. */
   detail: Detail;
+  /** Empty for bundles cached before this field existed. */
+  week: Week;
   hourly: Hour[];
   daily: Day[];
   air: Air | null;

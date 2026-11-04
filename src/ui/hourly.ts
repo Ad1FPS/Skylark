@@ -35,6 +35,8 @@ export function renderHourly(b: WeatherBundle, s: Settings): HTMLElement {
   const items = buildItems(b, 24);
   const card = document.createElement("section");
   card.className = "card";
+  card.dataset.detail = "day";
+  card.dataset.day = "0";
 
   const title = document.createElement("h2");
   title.className = "card-title";

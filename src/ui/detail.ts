@@ -3,7 +3,8 @@ import { icon } from "../icons";
 import type { DetailContent } from "./detail-common";
 import { windView, precipitationView, humidityView, feelsView, pressureView, visibilityView } from "./detail-weather";
 import { uvView, airView, sunView } from "./detail-air-sun";
-import { dailyView, radarView } from "./detail-forecast";
+import { radarView } from "./detail-forecast";
+import { dayView } from "./detail-day";
 import type { PopoverHandle } from "./popover";
 import { openPopover } from "./popover";
 
@@ -17,10 +18,10 @@ export type DetailKind =
   | "visibility"
   | "air"
   | "sun"
-  | "daily"
+  | "day"
   | "radar";
 
-type View = (b: WeatherBundle, s: Settings) => DetailContent | null;
+type View = (b: WeatherBundle, s: Settings, arg?: number) => DetailContent | null;
 
 const VIEWS: Record<DetailKind, View> = {
   wind: windView,
@@ -32,7 +33,7 @@ const VIEWS: Record<DetailKind, View> = {
   visibility: visibilityView,
   air: airView,
   sun: sunView,
-  daily: dailyView,
+  day: dayView,
   radar: radarView,
 };
 
@@ -43,12 +44,12 @@ export function closeDetail(): void {
   popover?.close();
 }
 
-export function openDetail(kind: DetailKind, b: WeatherBundle, s: Settings, anchor?: HTMLElement): void {
+export function openDetail(kind: DetailKind, b: WeatherBundle, s: Settings, anchor?: HTMLElement, arg?: number): void {
   if (popover && (!anchor || popoverAnchor === anchor)) {
     closeDetail();
     return;
   }
-  const content = VIEWS[kind](b, s);
+  const content = VIEWS[kind](b, s, arg);
   if (!content) return;
   closeDetail();
 

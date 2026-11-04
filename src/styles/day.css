@@ -1,0 +1,240 @@
+.popover .day {
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Day strip */
+.popover .day-strip {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.popover .day-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0 2px;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 120ms var(--ease);
+}
+
+.popover .day-chip:hover .day-chip-wd {
+  color: var(--text);
+}
+
+.popover .day-chip-wd {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+  transition: color 120ms var(--ease);
+}
+
+.popover .day-chip-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.popover .day-chip.is-today .day-chip-num {
+  color: #7fd8e6;
+}
+
+.popover .day-chip.is-active .day-chip-num {
+  background: #7fd8e6;
+  color: #0c1c26;
+}
+
+.popover .day-chip.is-active .day-chip-wd {
+  color: var(--text);
+}
+
+/* Nav row */
+.popover .day-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.popover .day-nav-date {
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.popover .day-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color 120ms var(--ease), background 120ms var(--ease);
+}
+
+.popover .day-nav-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.popover .day-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Headline */
+.popover .day-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.popover .day-now {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+}
+
+.popover .day-now-temp {
+  font-size: 40px;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--text);
+}
+
+.popover .day-now-low {
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--text-3);
+}
+
+.popover .day-hl {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.popover .day-caption {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* Content */
+.popover .day-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Icon strip */
+.popover .day-icons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-2);
+}
+
+.popover .day-icon {
+  display: inline-flex;
+}
+
+/* Segmented control */
+.popover .day-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 3px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+}
+
+.popover .day-seg-btn {
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms var(--ease), color 120ms var(--ease);
+}
+
+.popover .day-seg-btn:hover {
+  color: var(--text);
+}
+
+.popover .day-seg-btn.is-active {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--text);
+}
+
+/* Precipitation */
+.popover .day-sub {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.popover .day-rain {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Clickable daily rows (in the 10-day card) */
+.daily-row[data-detail] {
+  border-radius: 10px;
+  margin-left: -8px;
+  margin-right: -8px;
+  padding-left: 8px;
+  padding-right: 8px;
+  cursor: pointer;
+}
+
+/* Right-axis gutters for charts inside the popover (match detail-day gutters) */
+.popover .day .chart-y-right {
+  left: auto;
+  right: 0;
+  align-items: flex-end;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover .day-chip,
+  .popover .day-chip-wd,
+  .popover .day-nav-btn,
+  .popover .day-seg-btn {
+    transition: none;
+  }
+}

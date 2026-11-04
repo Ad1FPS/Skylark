@@ -24,6 +24,8 @@ export function renderDaily(b: WeatherBundle, s: Settings): HTMLElement {
     const cond = describe(d.weatherCode, true);
     const row = document.createElement("div");
     row.className = "daily-row";
+    row.dataset.detail = "day";
+    row.dataset.day = String(i);
 
     const left = ((d.tempMin - lo) / span) * 100;
     const width = ((d.tempMax - d.tempMin) / span) * 100;

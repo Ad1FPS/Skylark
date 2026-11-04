@@ -8,6 +8,7 @@ import "./styles/fx.css";
 import "./styles/titlebar.css";
 import "./styles/detail.css";
 import "./styles/popover.css";
+import "./styles/day.css";
 import { createTitlebar } from "./ui/titlebar";
 import { openDetail, type DetailKind } from "./ui/detail";
 import type { Location, WeatherBundle } from "./types";
@@ -107,7 +108,6 @@ function renderMain(main: HTMLElement, b: WeatherBundle): void {
   grid.className = "grid";
   const daily = renderDaily(b, state.settings);
   daily.classList.add("span-2", "row-2");
-  daily.dataset.detail = "daily";
   grid.appendChild(daily);
   const radar = renderRadar(b, state.settings);
   const nowcast = renderNowcast(b, state.settings);
@@ -116,7 +116,7 @@ function renderMain(main: HTMLElement, b: WeatherBundle): void {
   for (const card of renderCards(b, state.settings)) grid.appendChild(card);
   grid.addEventListener("click", (e) => {
     const tile = (e.target as HTMLElement).closest<HTMLElement>("[data-detail]");
-    if (tile?.dataset.detail) openDetail(tile.dataset.detail as DetailKind, b, state.settings, tile);
+    if (tile?.dataset.detail) openDetail(tile.dataset.detail as DetailKind, b, state.settings, tile, tile.dataset.day ? Number(tile.dataset.day) : undefined);
   });
   main.appendChild(grid);
 }
