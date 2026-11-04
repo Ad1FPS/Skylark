@@ -1,6 +1,7 @@
 import type { Settings, WeatherBundle } from "../types";
 import { compass, esc, tempDeg, tempColor, clock, localClock } from "../format";
 import { icon } from "../icons";
+import { renderMoonCard } from "./moon-card";
 
 const AQI_STOPS: Array<[number, string]> = [
   [0, "#4ade80"],
@@ -333,6 +334,7 @@ export function renderCards(b: WeatherBundle, s: Settings): HTMLElement[] {
   out.push(tag(uvCard(b), "uv"));
   out.push(tag(sunCard(b, s), "sun"));
   out.push(tag(windCard(b, s), "wind"));
+  out.push(tag(renderMoonCard(b, s), "moon"));
   out.push(tag(precipCard(b), "precipitation"));
   out.push(tag(feelsCard(b, s), "feels"));
   out.push(tag(humidityCard(b, s), "humidity"));
