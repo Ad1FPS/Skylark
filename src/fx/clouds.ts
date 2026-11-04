@@ -14,6 +14,8 @@ const TONE_RGB: Record<Tone, { shade: string; light: string }> = {
 const SPRITE_W = 480;
 const SPRITE_H = 200;
 const COUNT = 18;
+/** Sprites are baked at this multiple of their drawn size so big windows do not just stretch a small bitmap. */
+const SPRITE_RES = 1.5;
 
 const SPRITES: Partial<Record<Tone, HTMLCanvasElement[]>> = {};
 
@@ -25,10 +27,11 @@ function sprites(tone: Tone): HTMLCanvasElement[] {
   const tone_ = TONE_RGB[tone];
   for (let v = 0; v < 3; v++) {
     const c = document.createElement("canvas");
-    c.width = SPRITE_W;
-    c.height = SPRITE_H;
+    c.width = SPRITE_W * SPRITE_RES;
+    c.height = SPRITE_H * SPRITE_RES;
     const g = c.getContext("2d");
     if (g) {
+      g.scale(SPRITE_RES, SPRITE_RES);
       const r = rng(1000 + v * 37);
       // Many small soft puffs inside a dome with a flat base read as billows, not as circles.
       const puffs: { x: number; y: number; radius: number }[] = [];
@@ -58,14 +61,15 @@ function sprites(tone: Tone): HTMLCanvasElement[] {
       for (const p of puffs) puff(p, tone_.light, -0.35, -0.5, 1.0, 0.3);
       g.globalCompositeOperation = "source-over";
       // Soften the whole thing so no puff outline survives.
+      g.setTransform(1, 0, 0, 1, 0, 0);
       const soft = document.createElement("canvas");
-      soft.width = SPRITE_W;
-      soft.height = SPRITE_H;
+      soft.width = c.width;
+      soft.height = c.height;
       const sg = soft.getContext("2d");
       if (sg) {
-        sg.filter = "blur(3.5px)";
+        sg.filter = `blur(${2.2 * SPRITE_RES}px)`;
         sg.drawImage(c, 0, 0);
-        g.clearRect(0, 0, SPRITE_W, SPRITE_H);
+        g.clearRect(0, 0, c.width, c.height);
         g.drawImage(soft, 0, 0);
       }
     }

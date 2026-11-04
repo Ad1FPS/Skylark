@@ -1,7 +1,7 @@
 import { CALM_SCENE, type Fx, type Layer, type Scene } from "./types";
 import { createLayers } from "./layers";
 
-const MAX_PIXELS = 1_000_000;
+const MAX_PIXELS = 2_100_000;
 const MAX_FPS = 30;
 const SMOOTH_MAX_FPS = 60;
 const SNAP_FADE_MS = 180;
