@@ -1,8 +1,13 @@
 import type { Layer } from "./types";
-import { createClouds } from "./clouds";
+import { createGlow } from "./glow";
 import { createStars } from "./stars";
+import { createClouds } from "./clouds";
+import { createFog } from "./fog";
+import { createRain } from "./rain";
+import { createSnow } from "./snow";
+import { createLightning } from "./lightning";
 
 /** Back to front draw order. */
 export function createLayers(): Layer[] {
-  return [createStars(), createClouds()];
+  return [createGlow(), createStars(), createClouds(), createFog(), createRain(), createSnow(), createLightning()];
 }

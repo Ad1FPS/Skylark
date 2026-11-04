@@ -19,6 +19,9 @@ export interface Scene {
   wind: number;
   /** Absolute wind strength. */
   windSpeed: number;
+  /** Where the sun (by day) or moon (by night) sits, as fractions of the canvas width and height. */
+  bodyX: number;
+  bodyY: number;
   /** 1 by day, 0 by night. Layers use this (not a boolean) so everything crossfades at dusk. */
   daylight: number;
 }
@@ -35,6 +38,8 @@ export const CALM_SCENE: Scene = {
   twilight: 0,
   wind: 0,
   windSpeed: 0,
+  bodyX: 0.8,
+  bodyY: 0.14,
   daylight: 1,
 };
 

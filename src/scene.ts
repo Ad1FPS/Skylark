@@ -16,6 +16,17 @@ function twilightAt(now: string, sunrise?: string, sunset?: string): number {
   return clamp(1 - nearest / 45);
 }
 
+/** 0..1: how far the sun has travelled between sunrise and sunset, or the moon between sunset and the next sunrise. */
+function bodyProgress(now: string, sunrise?: string, sunset?: string): number {
+  if (!sunrise || !sunset) return 0.6;
+  const t = minutes(now);
+  const rise = minutes(sunrise);
+  const set = minutes(sunset);
+  if (t >= rise && t <= set) return clamp((t - rise) / (set - rise || 1));
+  if (t > set) return clamp((t - set) / (rise + 1440 - set || 1));
+  return clamp((t - (set - 1440)) / (rise - (set - 1440) || 1));
+}
+
 interface Sky {
   clouds: number;
   dark: number;
@@ -45,36 +56,65 @@ function skyFor(code: number): Sky {
   return { clouds: 0.5, dark: 0.2 };
 }
 
-/** Turn a weather bundle into background layer intensities. */
-export function sceneFor(b: WeatherBundle): Scene {
-  const c = b.current;
-  const sky = skyFor(c.weatherCode);
-  const day = b.daily[0];
+export interface SceneInput {
+  code: number;
+  isDay: boolean;
+  /** Measured precipitation in mm. */
+  precipitation: number;
+  /** Wind speed in km/h and the direction it blows FROM in degrees. */
+  windKmh: number;
+  windFrom: number;
+  /** Dawn/dusk strength 0..1 before cloud dimming. */
+  twilight: number;
+  /** Sun or moon progress across the sky, 0..1 (see bodyProgress). Defaults to a high-right position. */
+  bodyT?: number;
+}
+
+/** Turn raw conditions into background layer intensities. */
+export function sceneForCode(i: SceneInput): Scene {
+  const sky = skyFor(i.code);
 
   // Measured precipitation can push a rain scene up, never turn a dry one wet.
   let rain = sky.rain ?? 0;
-  if (rain > 0 && c.precipitation >= 2) rain = Math.max(rain, 0.85);
+  if (rain > 0 && i.precipitation >= 2) rain = Math.max(rain, 0.85);
 
   const fog = sky.fog ?? 0;
   const open = clamp(1 - sky.clouds * 1.1 - fog * 0.5);
 
   // Wind blows TOWARD direction + 180; +1 is rightwards, -1 leftwards.
-  const windSpeed = clamp(c.windSpeed / 50);
-  const wind = Math.sin(((c.windDirection + 180) * Math.PI) / 180) * windSpeed;
+  const windSpeed = clamp(i.windKmh / 50);
+  const wind = Math.sin(((i.windFrom + 180) * Math.PI) / 180) * windSpeed;
 
   return {
     ...CALM_SCENE,
-    daylight: c.isDay ? 1 : 0,
+    daylight: i.isDay ? 1 : 0,
     clouds: sky.clouds,
     cloudDark: sky.dark,
     rain,
     snow: sky.snow ?? 0,
     fog,
     lightning: sky.lightning ?? 0,
-    stars: c.isDay ? 0 : open,
-    sun: c.isDay ? open : 0,
-    twilight: twilightAt(c.time, day?.sunrise, day?.sunset) * (1 - sky.clouds * 0.6),
+    stars: i.isDay ? 0 : clamp(1 - sky.clouds * 0.9 - fog * 0.5),
+    sun: i.isDay ? open : 0,
+    twilight: clamp(i.twilight) * (1 - sky.clouds * 0.6),
     wind,
     windSpeed,
+    // The sun or moon rides an arc: low at the left horizon, highest at mid-journey, low at the right.
+    bodyX: 0.1 + 0.8 * (i.bodyT ?? 0.62),
+    bodyY: 0.46 - 0.34 * Math.sin(Math.PI * (i.bodyT ?? 0.62)),
   };
+}
+
+export function sceneFor(b: WeatherBundle): Scene {
+  const c = b.current;
+  const day = b.daily[0];
+  return sceneForCode({
+    code: c.weatherCode,
+    isDay: c.isDay,
+    precipitation: c.precipitation,
+    windKmh: c.windSpeed,
+    windFrom: c.windDirection,
+    twilight: twilightAt(c.time, day?.sunrise, day?.sunset),
+    bodyT: bodyProgress(c.time, day?.sunrise, day?.sunset),
+  });
 }
