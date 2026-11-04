@@ -27,10 +27,9 @@ function barHeight(mm: number): number {
   return Math.max(3, 56 * v);
 }
 
-export function renderNowcast(b: WeatherBundle, s: Settings): HTMLElement | null {
+/** One sentence about the coming hours of rain, shared by the tile and its popover. */
+export function nowcastSummary(b: WeatherBundle, s: Settings): string {
   const steps = b.minutely.slice(0, MAX_STEPS);
-  if (steps.length === 0) return null;
-
   const firstWet = steps.findIndex((x) => isWet(x.precipitation));
   const lastWet = (() => {
     for (let i = steps.length - 1; i >= 0; i--) {
@@ -57,9 +56,18 @@ export function renderNowcast(b: WeatherBundle, s: Settings): HTMLElement | null
   } else {
     summary = "No rain expected in the next 8 hours.";
   }
+  return summary;
+}
+
+export function renderNowcast(b: WeatherBundle, s: Settings): HTMLElement | null {
+  const steps = b.minutely.slice(0, MAX_STEPS);
+  if (steps.length === 0) return null;
+
+  const summary = nowcastSummary(b, s);
 
   const section = document.createElement("section");
   section.className = "nowcast";
+  section.dataset.detail = "nowcast";
 
   const head = document.createElement("div");
   head.className = "nowcast-head";

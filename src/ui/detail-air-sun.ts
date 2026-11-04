@@ -90,6 +90,24 @@ const POLLUTANTS: Array<{ name: string; key: "pm25" | "pm10" | "ozone" | "no2" |
   { name: "Carbon monoxide", key: "co", ref: 10000 },
 ];
 
+const HEALTH: [number, string][] = [
+  [50, "Enjoy your outdoor activities. Adverse health effects are not expected."],
+  [100, "Air quality is acceptable. Unusually sensitive people should consider reducing long or heavy outdoor exertion."],
+  [150, "Sensitive groups may experience health effects. The general public is less likely to be affected."],
+  [200, "Everyone may begin to experience health effects; sensitive groups may experience more serious ones."],
+  [300, "Health alert: everyone may experience more serious health effects."],
+  [Infinity, "Health warning of emergency conditions: everyone is more likely to be affected."],
+];
+
+const POLLUTANT_NOTES: Record<string, string> = {
+  pm25: "Fine particles from combustion, traffic and smoke can reach deep into the lungs.",
+  pm10: "Coarse dust and particles from roads, construction and fires can irritate the airways.",
+  ozone: "Ozone is typically elevated by traffic, fossil fuel combustion and fires, and can be transported long distances.",
+  no2: "Nitrogen dioxide comes mostly from traffic and power generation and can inflame the airways.",
+  so2: "Sulphur dioxide comes mainly from burning coal and oil and from industry.",
+  co: "Carbon monoxide comes from incomplete combustion, mostly traffic and heating.",
+};
+
 export function airView(b: WeatherBundle): DetailContent | null {
   const air = b.air;
   if (!air) return null;
@@ -97,6 +115,11 @@ export function airView(b: WeatherBundle): DetailContent | null {
   body.className = "dt";
   body.appendChild(headline(String(air.usAqi), "", aqiCategory(air.usAqi)));
   body.appendChild(sentence(aqiSentence(air.usAqi)));
+  body.appendChild(sentence("Scale: US AQI"));
+  const health = HEALTH.find(([max]) => air.usAqi <= max)?.[1] ?? "";
+  body.appendChild(section("Health information", sentence(health)));
+  const primary = POLLUTANTS.reduce((best, p) => (air[p.key] / p.ref > air[best.key] / best.ref ? p : best));
+  body.appendChild(section("Primary pollutant", sentence(`${primary.name}. ${POLLUTANT_NOTES[primary.key]}`)));
 
   if (air.hourly.time.length > 0) {
     body.appendChild(

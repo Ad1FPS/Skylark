@@ -122,3 +122,48 @@
   color: var(--text-3);
   margin-top: 2px;
 }
+
+/* Feels Like: actual temperature and the offset slider */
+.feels-actual {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.feels-track {
+  position: relative;
+  height: 6px;
+  margin: 8px 14px 10px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.feels-track::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  width: 1.5px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.feels-pill {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #10202e;
+  background: #dfe8f2;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.feels-pill.cold {
+  background: #8fd6ff;
+}
+
+.feels-pill.warm {
+  background: #ffc27a;
+}

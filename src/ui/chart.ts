@@ -24,6 +24,7 @@ export interface ChartOpts {
   height?: number; // px, default 180
   format?: (v: number) => string; // value text for tooltip and y labels
   bands?: Band[];
+  xStep?: number; // entries between x labels, default 6
   yAxis?: "left" | "right"; // where value labels sit; gutter follows
   extrema?: boolean; // mark min/max of the first line/area series
 }
@@ -146,7 +147,7 @@ export function renderChart(o: ChartOpts): HTMLElement {
   xl.className = "chart-x";
   xl.style.paddingLeft = `${(padL / W) * 100}%`;
   xl.style.paddingRight = `${(padR / W) * 100}%`;
-  for (let i = 0; i < n; i += 6) {
+  for (let i = 0; i < n; i += o.xStep ?? 6) {
     const lab = document.createElement("span");
     lab.textContent = hourOf(o.times[i]);
     const pct = ((x(i) - padL) / plotW) * 100;

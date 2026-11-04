@@ -252,8 +252,14 @@ function feelsCard(b: WeatherBundle, s: Settings): HTMLElement {
   if (diff < -1) sentence = "Wind is making it feel cooler.";
   else if (diff > 1) sentence = "Feels warmer than the actual temperature.";
   else sentence = "Similar to the actual temperature.";
+  // Slider from -8 to +8 degrees of difference; the pill sits where the feel differs from reality.
+  const shown = Math.round(diff);
+  const pos = Math.max(0, Math.min(100, 50 + (diff / 8) * 50));
+  const label = shown > 0 ? `+${shown}\u00B0` : `${shown}\u00B0`;
   body.innerHTML = `
     <div class="value">${esc(tempDeg(b.current.apparent, s))}</div>
+    <div class="feels-actual">Actual: ${esc(tempDeg(b.current.temperature, s))}</div>
+    <div class="feels-track" aria-hidden="true"><span class="feels-pill${diff < -0.5 ? " cold" : diff > 0.5 ? " warm" : ""}" style="left:${pos.toFixed(1)}%">${esc(label)}</span></div>
     <div class="sentence">${esc(sentence)}</div>
   `;
   card.appendChild(body);

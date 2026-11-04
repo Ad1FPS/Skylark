@@ -1,6 +1,7 @@
 import type { Settings, WeatherBundle } from "../types";
 import { compass, tempDeg, wind } from "../format";
 import { renderChart } from "./chart";
+import { RAIN_BANDS } from "./detail-nowcast";
 import type { DetailContent } from "./detail-common";
 import { hasDetail, headline, hhmm, noDetailNote, nowIndex, section, sentence, statGrid } from "./detail-common";
 
@@ -70,6 +71,7 @@ export function precipitationView(b: WeatherBundle): DetailContent {
   let peak = 0;
   for (const p of b.detail.precipitationProbability) if (p > peak) peak = p;
   body.appendChild(sentence(`Tomorrow ${tomorrow.toFixed(1)} mm. Highest chance ${peak}%.`));
+  body.appendChild(sentence("Bands show light (under 2.5 mm per hour), moderate (up to 7.6 mm) and heavy rain."));
 
   if (!hasDetail(b)) {
     body.appendChild(noDetailNote());
@@ -82,6 +84,7 @@ export function precipitationView(b: WeatherBundle): DetailContent {
           nowIndex: nowIndex(b),
           series: [{ values: b.detail.precipitation, color: "#5aa9ff", kind: "bars", label: "Rain" }],
           format: (v) => `${v.toFixed(1)} mm`,
+          bands: RAIN_BANDS,
         })
       )
     );
