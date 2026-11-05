@@ -109,6 +109,14 @@ async fn refresh(app: &AppHandle) {
         minutes,
     );
     apply_status(app, &text);
+
+    // Official warnings: announce new ones (only when the user turned notifications on).
+    if commands::ALERT_NOTIFICATIONS.load(std::sync::atomic::Ordering::Relaxed)
+        && let Some(cache) = app.try_state::<crate::alerts::AlertCache>()
+        && let Ok(alerts) = crate::alerts::alerts_for(&http.0, &cache, &location).await
+    {
+        crate::alerts::notify_new(app, &location, &alerts);
+    }
 }
 
 fn apply_status(app: &AppHandle, text: &str) {

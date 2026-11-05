@@ -28,7 +28,8 @@ export type IconName =
   | "close"
   | "refresh"
   | "cog"
-  | "locate";
+  | "locate"
+  | "alert";
 
 const ATTR =
   'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
@@ -62,6 +63,7 @@ const PATHS: Record<IconName, string> = {
   close: `<path d="M6 6l12 12M18 6L6 18"/>`,
   refresh: `<path d="M20 11a8 8 0 0 0-14-4l-2 2M4 5v4h4M4 13a8 8 0 0 0 14 4l2-2M20 19v-4h-4"/>`,
   cog: `<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2 2M17.1 17.1l2 2M19.1 4.9l-2 2M6.9 17.1l-2 2"/>`,
+  alert: `<path d="M12 3.5 2.8 19.5h18.4L12 3.5Z" ${SOFT}/><path d="M12 3.5 2.8 19.5h18.4L12 3.5Z"/><path d="M12 10v4.5M12 17.2v.1"/>`,
   locate: `<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5" ${SOFT}/><circle cx="12" cy="12" r="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>`,
 };
 

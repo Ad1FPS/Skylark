@@ -1,0 +1,82 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4f41277b5e50cad2923b9d7c15f9df1b37f76079.001.1",
+   "type": "Feature",
+   "properties": {
+    "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4f41277b5e50cad2923b9d7c15f9df1b37f76079.001.1",
+    "@type": "wx:Alert",
+    "id": "urn:oid:2.49.0.1.840.0.4f41277b5e50cad2923b9d7c15f9df1b37f76079.001.1",
+    "areaDesc": "Caddo; Bossier; Webster; Claiborne; Lincoln; Union; De Soto; Red River; Bienville; Jackson; Ouachita; Sabine; Natchitoches; Winn; Grant; Caldwell; La Salle; Panola; Nacogdoches; Shelby; Angelina; San Augustine; Sabine",
+    "affectedZones": [
+     "https://api.weather.gov/zones/forecast/LAZ001",
+     "https://api.weather.gov/zones/forecast/LAZ002"
+    ],
+    "references": [
+     {
+      "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.bb5c53b99cc2984b366d18eb9d5a759094983360.001.1",
+      "identifier": "urn:oid:2.49.0.1.840.0.bb5c53b99cc2984b366d18eb9d5a759094983360.001.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "sent": "2026-11-04T23:24:00-06:00"
+     }
+    ],
+    "sent": "2026-11-05T00:06:00-06:00",
+    "effective": "2026-11-05T00:06:00-06:00",
+    "onset": "2026-11-05T03:00:00-06:00",
+    "expires": "2026-11-05T09:00:00-06:00",
+    "ends": "2026-11-05T09:00:00-06:00",
+    "status": "Actual",
+    "messageType": "Update",
+    "category": "Met",
+    "severity": "Moderate",
+    "certainty": "Likely",
+    "urgency": "Expected",
+    "event": "Dense Fog Advisory",
+    "sender": "w-nws.webmaster@noaa.gov",
+    "senderName": "NWS Shreveport LA",
+    "headline": "Dense Fog Advisory issued November 5 at 12:06AM CST until November 5 at 9:00AM CST by NWS Shreveport LA",
+    "description": "* WHAT...Visibility one quarter mile or less in dense fog.\n\n* WHERE...Much of northern and central Louisiana and deep east Texas,\nincluding segments of I-20 and I-49 from Lufkin and Toledo Bend\nCountry and portions of Central Louisiana, up to Shreveport and\nMonroe.\n\n* WHEN...From 3 AM to 9 AM CST this morning.\n\n* IMPACTS...Low visibility could make driving conditions hazardous.",
+    "instruction": "If driving, slow down, use your headlights, and leave plenty of\ndistance ahead of you.",
+    "response": "Execute",
+    "note": null,
+    "parameters": {
+     "AWIPSidentifier": [
+      "NPWSHV"
+     ],
+     "WMOidentifier": [
+      "WWUS74 KSHV 050606"
+     ],
+     "NWSheadline": [
+      "DENSE FOG ADVISORY IN EFFECT FROM 3 AM UNTIL 9 AM CST THIS MORNING"
+     ],
+     "BLOCKCHANNEL": [
+      "EAS",
+      "NWEM",
+      "CMAS"
+     ],
+     "VTEC": [
+      "/O.EXT.KSHV.FG.Y.0007.261105T0900Z-261105T1500Z/"
+     ],
+     "eventEndingTime": [
+      "2026-11-05T09:00:00-06:00"
+     ]
+    },
+    "scope": "Public",
+    "code": "IPAWSv1.0",
+    "language": "en-US",
+    "web": "http://www.weather.gov",
+    "eventCode": {
+     "SAME": [
+      "NWS"
+     ],
+     "NationalWeatherService": [
+      "FGY"
+     ]
+    }
+   }
+  }
+ ],
+ "title": "sample",
+ "updated": "2026-11-05T07:19:38+00:00"
+}

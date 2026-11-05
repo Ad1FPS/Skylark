@@ -5,6 +5,7 @@ import { esc, localClock, saveSettings, temp, tempDeg } from "../format";
 import { describe, skyGradient } from "../theme";
 import { icon } from "../icons";
 import { sceneFor } from "../scene";
+import { loadAlerts, onAlertsChange, peekAlerts, severityColor, worstSeverity } from "../alerts/store";
 import { addMiniSky } from "../fx/minisky";
 import type { Scene } from "../fx/types";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
@@ -280,6 +281,13 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
         row.classList.add("has-sky");
       }
 
+      // A small warning mark when the city has an active official alert.
+      void loadAlerts(loc);
+      const worst = worstSeverity(peekAlerts(loc));
+      const alertMark = worst
+        ? `<span class="city-alert" style="--sev:${severityColor(worst)}" title="Weather alert">${icon("alert", 12)}</span>`
+        : "";
+
       const day = b?.daily[0];
       const hl = day ? `H:${temp(day.tempMax, state.settings)}° L:${temp(day.tempMin, state.settings)}°` : "";
       const offset = b ? b.utcOffsetSeconds : null;
@@ -287,7 +295,7 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
         <button class="city-main" type="button">
           <span class="city-text">
             <span class="city-top">
-              <span class="city-name">${esc(loc.name)}</span>
+              <span class="city-name">${esc(loc.name)}${alertMark}</span>
               <span class="city-temp">${esc(tempTxt)}</span>
             </span>
             <span class="city-time"${offset !== null ? ` data-offset="${offset}"` : ""}>${offset !== null ? esc(localClock(offset, state.settings)) : esc(secondary(loc))}</span>
@@ -382,6 +390,14 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       { label: "Off", value: "off", active: s.keepAlive === "off" },
       { label: "On", value: "on", active: s.keepAlive === "on" },
     ], (v) => update({ ...state.settings, keepAlive: v as Settings["keepAlive"] })));
+    const alertLabel = document.createElement("div");
+    alertLabel.className = "side-setting-label";
+    alertLabel.textContent = "Alert notifications";
+    alertLabel.title = "Show a system notification when a new official weather warning (moderate or worse) is issued for your current location. Available in the US and Germany.";
+    settingsBox.append(alertLabel, segmented([
+      { label: "Off", value: "off", active: s.alertNotifications === "off" },
+      { label: "On", value: "on", active: s.alertNotifications === "on" },
+    ], (v) => update({ ...state.settings, alertNotifications: v as Settings["alertNotifications"] })));
     if (autostart !== null) {
       const label = document.createElement("div");
       label.className = "side-setting-label";
@@ -441,6 +457,9 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       renderSettings();
     }
   });
+
+  // Re-draw the rows when a city's alerts change (only fires on real changes, so no loop).
+  onAlertsChange(() => renderList());
 
   renderList();
   renderSettings();

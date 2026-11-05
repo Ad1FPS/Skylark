@@ -18,6 +18,14 @@ pub fn set_keep_alive(on: bool) {
     KEEP_ALIVE.store(on, std::sync::atomic::Ordering::Relaxed);
 }
 
+/// When set, new moderate-or-worse alerts for the current location raise a system notification.
+pub static ALERT_NOTIFICATIONS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[tauri::command]
+pub fn set_alert_notifications(on: bool) {
+    ALERT_NOTIFICATIONS.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
 pub struct Http(pub reqwest::Client);
 
 impl Http {

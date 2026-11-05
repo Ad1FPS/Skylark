@@ -1,3 +1,4 @@
+mod alerts;
 mod climate;
 mod commands;
 mod store;
@@ -19,11 +20,13 @@ pub fn run() {
             tray::show_window(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![MINIMIZED_FLAG]),
         ))
         .manage(Http::new())
+        .manage(alerts::AlertCache::default())
         .invoke_handler(tauri::generate_handler![
             commands::search_city,
             commands::locate_ip,
@@ -34,8 +37,10 @@ pub fn run() {
             commands::remove_location,
             commands::set_current_location,
             commands::set_keep_alive,
+            commands::set_alert_notifications,
             climate::get_normal,
             wind::get_wind_grid,
+            alerts::get_alerts,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event

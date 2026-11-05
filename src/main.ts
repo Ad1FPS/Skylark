@@ -12,6 +12,7 @@ import "./styles/glass.css";
 import "./styles/moon.css";
 import "./styles/averages.css";
 import "./styles/windmap.css";
+import "./styles/alerts.css";
 import "./styles/day.css";
 import { createTitlebar } from "./ui/titlebar";
 import { openDetail, type DetailKind } from "./ui/detail";
@@ -25,10 +26,12 @@ import {
   locateIp,
   setCurrentLocation,
   setKeepAlive,
+  setAlertNotifications,
 } from "./api";
 import { state, set, subscribe } from "./state";
 import { renderHero } from "./ui/hero";
 import { renderHourly } from "./ui/hourly";
+import { renderAlertStrip } from "./ui/alerts";
 import { renderDaily } from "./ui/daily";
 import { renderCards } from "./ui/cards";
 import { renderRadar } from "./ui/radar";
@@ -90,6 +93,7 @@ function setupShell(): { main: HTMLElement } {
 
 /** Crossfade to a new sky gradient; a no-op when it is already showing. */
 let lastKeepAlive: string | null = null;
+let lastAlertNotifications: string | null = null;
 
 /**
  * Lets the backend mark the page hidden or visible when it hides or shows the window.
@@ -139,8 +143,14 @@ function applySky(bundle: WeatherBundle, instant = false): void {
 
 function renderMain(main: HTMLElement, b: WeatherBundle): void {
   currentMain = main;
+  const strip = renderAlertStrip(b, state.settings);
+  strip.addEventListener("click", (e) => {
+    const pill = (e.target as HTMLElement).closest<HTMLElement>("[data-detail]");
+    if (pill?.dataset.detail) openDetail("alert", b, state.settings, pill, Number(pill.dataset.day ?? 0));
+  });
   main.replaceChildren(
     renderHero(b, state.settings),
+    strip,
     renderHourly(b, state.settings),
   );
   const grid = document.createElement("section");
@@ -307,6 +317,10 @@ async function init(): Promise<void> {
     if (s.settings.keepAlive !== lastKeepAlive) {
       lastKeepAlive = s.settings.keepAlive;
       void setKeepAlive(lastKeepAlive === "on");
+    }
+    if (s.settings.alertNotifications !== lastAlertNotifications) {
+      lastAlertNotifications = s.settings.alertNotifications;
+      void setAlertNotifications(lastAlertNotifications === "on");
     }
     fx?.setSmooth(s.settings.fps === "60");
     glass?.setSmooth(s.settings.fps === "60");

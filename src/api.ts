@@ -70,10 +70,41 @@ export async function getWindGrid(
   }
 }
 
+export interface Alert {
+  id: string;
+  event: string;
+  severity: "minor" | "moderate" | "severe" | "extreme";
+  headline: string;
+  description: string;
+  instruction: string | null;
+  onset: number | null;
+  ends: number | null;
+  sender: string;
+  source: string;
+}
+
+export async function getAlerts(location: Location): Promise<Alert[]> {
+  try {
+    const alerts = await invoke<Alert[]>("get_alerts", { location });
+    return Array.isArray(alerts) ? alerts : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Tells the backend whether closing the window should only hide it. */
 export async function setKeepAlive(on: boolean): Promise<void> {
   try {
     await invoke<void>("set_keep_alive", { on });
+  } catch {
+    /* not running inside the app */
+  }
+}
+
+/** Tells the backend whether new official alerts should raise a system notification. */
+export async function setAlertNotifications(on: boolean): Promise<void> {
+  try {
+    await invoke<void>("set_alert_notifications", { on });
   } catch {
     /* not running inside the app */
   }

@@ -135,4 +135,6 @@ export interface Settings {
   icons: "mono" | "color";
   /** "on": closing the window hides it (instant reopen, about 110 MB stays in use) instead of freeing the webview. */
   keepAlive: "off" | "on";
+  /** "on": a system notification for new moderate-or-worse official alerts at the current location. */
+  alertNotifications: "off" | "on";
 }

@@ -416,3 +416,10 @@
 .city.has-sky.active {
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.65);
 }
+
+.city-alert {
+  display: inline-flex;
+  margin-left: 6px;
+  vertical-align: -1px;
+  color: var(--sev);
+}
