@@ -5,7 +5,7 @@ const AIR_URL: &str = "https://air-quality-api.open-meteo.com/v1/air-quality";
 const GEOCODE_URL: &str = "https://geocoding-api.open-meteo.com/v1/search";
 const IP_URL: &str = "https://ipwho.is/";
 
-const CURRENT_FIELDS: &str = "temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,visibility,uv_index,precipitation";
+const CURRENT_FIELDS: &str = "temperature_2m,apparent_temperature,relative_humidity_2m,is_day,weather_code,wind_speed_10m,wind_direction_10m,pressure_msl,visibility,uv_index,precipitation,cloud_cover";
 const HOURLY_FIELDS: &str = "temperature_2m,weather_code,precipitation_probability,is_day,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation,cloud_cover,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,visibility,uv_index";
 const DAILY_FIELDS: &str = "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,uv_index_max,sunrise,sunset,wind_speed_10m_max,wind_gusts_10m_max,apparent_temperature_max,apparent_temperature_min,daylight_duration,sunshine_duration,precipitation_hours";
 const AIR_FIELDS: &str = "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide";
@@ -207,6 +207,8 @@ struct RawCurrent {
     uv_index: Option<f32>,
     #[serde(default)]
     precipitation: Option<f32>,
+    #[serde(default)]
+    cloud_cover: Option<f32>,
 }
 
 #[derive(Deserialize)]
@@ -370,6 +372,22 @@ struct RawIp {
     longitude: f64,
 }
 
+/// Open-Meteo's weather code is the model's idea of the sky, and it can say rain or snow while the very same
+/// response reports no precipitation at all (seen: code 61 for hours with 0.0 mm and 0 % chance). A dry
+/// measurement wins: a light rain or snow code with no precipitation becomes the sky it really is, judged by
+/// cloud cover (overcast when that is unknown). Heavier, freezing and thunderstorm codes are left alone.
+fn reconcile_code(code: u8, precipitation: Option<f32>, cloud: Option<f32>) -> u8 {
+    let light_wet = matches!(code, 51 | 53 | 55 | 61 | 63 | 71 | 73 | 77 | 80 | 81 | 85);
+    match precipitation {
+        Some(p) if light_wet && p < 0.05 => match cloud {
+            Some(c) if c < 40.0 => 1,
+            Some(c) if c < 75.0 => 2,
+            _ => 3,
+        },
+        _ => code,
+    }
+}
+
 fn idx<T: Copy + Default>(v: &[Option<T>], i: usize) -> T {
     v.get(i).and_then(|x| *x).unwrap_or_default()
 }
@@ -435,7 +453,9 @@ fn build_week(h: &RawHourly, current_time: &str) -> Week {
         temperature: floats(&h.temperature_2m, start, end),
         apparent: floats(&h.apparent_temperature, start, end),
         precipitation_probability: (start..end).map(|i| idx(&h.precipitation_probability, i)).collect(),
-        weather_code: (start..end).map(|i| idx(&h.weather_code, i)).collect(),
+        weather_code: (start..end)
+            .map(|i| reconcile_code(idx(&h.weather_code, i), h.precipitation.get(i).copied().flatten(), h.cloud_cover.get(i).copied().flatten()))
+            .collect(),
         is_day: (start..end).map(|i| idx(&h.is_day, i) != 0).collect(),
     }
 }
@@ -453,7 +473,7 @@ fn parse_hourly(raw: Option<&RawHourly>, current_time: &str) -> Vec<Hour> {
             hourly.push(Hour {
                 time: h.time[i].clone(),
                 temperature: idx(&h.temperature_2m, i),
-                weather_code: idx(&h.weather_code, i),
+                weather_code: reconcile_code(idx(&h.weather_code, i), h.precipitation.get(i).copied().flatten(), h.cloud_cover.get(i).copied().flatten()),
                 precipitation_probability: h.precipitation_probability.get(i).copied().flatten(),
                 is_day: idx(&h.is_day, i) != 0,
             });
@@ -468,7 +488,7 @@ fn parse_daily(raw: Option<&RawDaily>) -> Vec<Day> {
         for i in 0..d.time.len().min(10) {
             daily.push(Day {
                 date: d.time[i].clone(),
-                weather_code: idx(&d.weather_code, i),
+                weather_code: reconcile_code(idx(&d.weather_code, i), d.precipitation_sum.get(i).copied().flatten(), None),
                 temp_max: idx(&d.temperature_2m_max, i),
                 temp_min: idx(&d.temperature_2m_min, i),
                 precipitation_probability_max: d.precipitation_probability_max.get(i).copied().flatten(),
@@ -512,7 +532,7 @@ pub fn parse_forecast(json: &str, loc: &Location, air: Option<Air>, now: i64) ->
         apparent: rc.apparent_temperature.unwrap_or(0.0),
         humidity: rc.relative_humidity_2m.unwrap_or(0.0).clamp(0.0, 255.0) as u8,
         is_day: rc.is_day.unwrap_or(0) != 0,
-        weather_code: rc.weather_code.unwrap_or(0),
+        weather_code: reconcile_code(rc.weather_code.unwrap_or(0), rc.precipitation, rc.cloud_cover),
         wind_speed: rc.wind_speed_10m.unwrap_or(0.0),
         wind_direction: rc.wind_direction_10m.unwrap_or(0.0).clamp(0.0, u16::MAX as f32) as u16,
         pressure: rc.pressure_msl.unwrap_or(0.0),
@@ -872,5 +892,26 @@ mod tests {
         assert!(parse_ip_location(r#"{"success":false}"#).is_err());
         assert!(parse_ip_location(r#"{"success":true,"city":""}"#).is_err());
         assert!(parse_ip_location("not json").is_err());
+    }
+    #[test]
+    fn reconcile_drops_rain_that_was_not_measured() {
+        // The exact case from a real response: code 61, 0.0 mm, fully overcast.
+        assert_eq!(reconcile_code(61, Some(0.0), Some(100.0)), 3);
+        assert_eq!(reconcile_code(61, Some(0.0), Some(60.0)), 2);
+        assert_eq!(reconcile_code(61, Some(0.0), Some(10.0)), 1);
+        assert_eq!(reconcile_code(61, Some(0.0), None), 3);
+        assert_eq!(reconcile_code(80, Some(0.0), Some(90.0)), 3);
+        assert_eq!(reconcile_code(71, Some(0.0), Some(95.0)), 3);
+    }
+
+    #[test]
+    fn reconcile_keeps_real_and_heavy_weather() {
+        assert_eq!(reconcile_code(61, Some(0.4), Some(100.0)), 61);
+        assert_eq!(reconcile_code(61, None, Some(100.0)), 61);
+        assert_eq!(reconcile_code(65, Some(0.0), Some(100.0)), 65);
+        assert_eq!(reconcile_code(95, Some(0.0), Some(100.0)), 95);
+        assert_eq!(reconcile_code(66, Some(0.0), Some(100.0)), 66);
+        assert_eq!(reconcile_code(3, Some(0.0), Some(100.0)), 3);
+        assert_eq!(reconcile_code(0, Some(0.0), Some(0.0)), 0);
     }
 }
