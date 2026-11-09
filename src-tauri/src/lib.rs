@@ -8,6 +8,11 @@ mod wind;
 
 use commands::Http;
 use tauri::Manager;
+use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+
+/// Remembered across reopens and restarts: closing to the tray destroys the window unless Keep ready is on,
+/// and a fresh window would otherwise come back at the config's default size in the middle of the screen.
+const WINDOW_STATE: StateFlags = StateFlags::SIZE.union(StateFlags::POSITION).union(StateFlags::MAXIMIZED);
 
 /// Passed by the autostart entry so a login launch goes straight to the tray.
 const MINIMIZED_FLAG: &str = "--minimized";
@@ -21,6 +26,8 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        // Restores size and position whenever the main window is (re)created.
+        .plugin(tauri_plugin_window_state::Builder::new().with_state_flags(WINDOW_STATE).build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![MINIMIZED_FLAG]),
@@ -45,11 +52,15 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event
                 && window.label() == "main"
-                && commands::KEEP_ALIVE.load(std::sync::atomic::Ordering::Relaxed)
             {
-                api.prevent_close();
-                let _ = window.hide();
-                tray::notify_visible(window.app_handle(), false);
+                // The plugin only writes its file on a clean exit, which a tray app rarely gets
+                // (Windows shutdown, Task Manager), so write it on every close as well.
+                let _ = window.app_handle().save_window_state(WINDOW_STATE);
+                if commands::KEEP_ALIVE.load(std::sync::atomic::Ordering::Relaxed) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                    tray::notify_visible(window.app_handle(), false);
+                }
             }
         })
         .setup(|app| {

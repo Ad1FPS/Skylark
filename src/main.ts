@@ -28,7 +28,7 @@ import {
   setKeepAlive,
   setAlertNotifications,
 } from "./api";
-import { state, set, subscribe } from "./state";
+import { state, set, subscribe, type LoadState, type State } from "./state";
 import { renderHero } from "./ui/hero";
 import { renderHourly } from "./ui/hourly";
 import { renderAlertStrip } from "./ui/alerts";
@@ -178,11 +178,11 @@ function renderPlaceholder(main: HTMLElement, text: string): void {
   main.replaceChildren(box);
 }
 
-function renderError(main: HTMLElement, retry: () => void): void {
+function renderError(main: HTMLElement, message: string, retry: () => void): void {
   const box = document.createElement("div");
   box.className = "error";
   const msg = document.createElement("div");
-  msg.textContent = state.error ?? "Something went wrong.";
+  msg.textContent = message || "Something went wrong.";
   const btn = document.createElement("button");
   btn.textContent = "Retry";
   btn.addEventListener("click", retry);
@@ -190,37 +190,61 @@ function renderError(main: HTMLElement, retry: () => void): void {
   main.replaceChildren(box);
 }
 
-async function selectLocation(loc: Location): Promise<void> {
-  const main = currentMain ?? document.getElementById("main");
+/** Bumped by every load; an answer whose number is no longer current belongs to a superseded load. */
+let loadSeq = 0;
+
+/**
+ * The only place the load phase changes (see `LoadState` in state.ts).
+ * - "select": the user picked `loc` (or the app started): show its cache at once, then fetch.
+ * - "refresh": quietly refetch `loc`; skipped while another load runs, and a failure keeps what is shown.
+ */
+async function loadWeather(loc: Location, mode: "select" | "refresh"): Promise<void> {
+  const main = currentMain;
   if (!main) return;
+  if (mode === "refresh" && state.load.phase === "loading") return;
+
+  const seq = ++loadSeq;
+  const superseded = (): boolean => seq !== loadSeq;
+  const before = state.load;
 
   const prev = state.bundle?.location;
+  // Jump the sky straight to the new city instead of easing from the old one.
   let snap = !!prev && (prev.latitude !== loc.latitude || prev.longitude !== loc.longitude);
-  set({ current: loc, loading: true, error: null });
-  setCurrentLocation(loc).catch(() => {});
+  const show = (b: WeatherBundle, load?: LoadState): void => {
+    set(load ? { bundle: b, load } : { bundle: b });
+    applySky(b, snap);
+    snap = false;
+    renderMain(main, b);
+  };
 
-  try {
-    const cached = await getCached(loc);
-    if (cached) {
-      set({ bundle: cached });
-      applySky(cached, snap);
-      snap = false;
-      renderMain(main, cached);
-    } else if (!state.bundle) {
-      renderPlaceholder(main, "Loading weather\u2026");
+  set({ current: loc, load: { phase: "loading", loc } });
+
+  if (mode === "select") {
+    setCurrentLocation(loc).catch(() => {});
+    try {
+      const cached = await getCached(loc);
+      if (superseded()) return;
+      if (cached) show(cached);
+      else if (!state.bundle) renderPlaceholder(main, "Loading weather\u2026");
+    } catch {
+      /* no cache */
     }
-  } catch {
-    /* no cache */
   }
 
   try {
     const b = await getWeather(loc, false);
-    set({ bundle: b, loading: false });
-    applySky(b, snap);
-    renderMain(main, b);
+    if (superseded()) return;
+    show(b, { phase: "ready", loc });
   } catch (err) {
-    set({ loading: false, error: String(err) });
-    renderError(main, () => void selectLocation(loc));
+    if (superseded()) return;
+    if (mode === "refresh") {
+      // Keep whatever is on screen: the last good bundle, or the error with its Retry button.
+      set({ load: before.phase === "idle" ? { phase: "error", loc, message: String(err) } : before });
+      return;
+    }
+    const message = String(err);
+    set({ load: { phase: "error", loc, message } });
+    renderError(main, message, () => void loadWeather(loc, "select"));
   }
 }
 
@@ -241,9 +265,39 @@ async function init(): Promise<void> {
   }
 
   initSidebar(document.getElementById("sidebar")!, (loc) => {
-    void selectLocation(loc);
+    void loadWeather(loc, "select");
   });
 
+  // Hiding the window to the tray (Keep ready mode) does not make WebView2 report the page as hidden,
+  // so the backend tells us, and every animation that watches document.hidden pauses.
+  installHiddenOverride();
+
+  // Re-render on settings changes without refetching. Other state changes render where they happen.
+  let lastSettings = state.settings;
+  const sync = (s: State): void => {
+    main.dataset.phase = s.load.phase;
+    // Must run before the re-render below so every icon picks up the new style.
+    setIconStyle(s.settings.icons);
+    if (s.settings.keepAlive !== lastKeepAlive) {
+      lastKeepAlive = s.settings.keepAlive;
+      void setKeepAlive(lastKeepAlive === "on");
+    }
+    if (s.settings.alertNotifications !== lastAlertNotifications) {
+      lastAlertNotifications = s.settings.alertNotifications;
+      void setAlertNotifications(lastAlertNotifications === "on");
+    }
+    fx?.setSmooth(s.settings.fps === "60");
+    glass?.setSmooth(s.settings.fps === "60");
+    if (s.settings !== lastSettings) {
+      lastSettings = s.settings;
+      if (s.bundle && main.querySelector("#grid")) renderMain(main, s.bundle);
+    }
+  };
+  subscribe(sync);
+  // Push the saved Keep ready and alert-notification choices to the backend now, not on the first change.
+  sync(state);
+
+  const seqAtStart = loadSeq;
   let saved: Location[] = [];
   try {
     saved = await getSaved();
@@ -266,69 +320,12 @@ async function init(): Promise<void> {
     if (saved.length === 0) saved = [start];
   }
   set({ saved });
-  const loc = saved[0] ?? DEFAULT;
-  setCurrentLocation(loc).catch(() => {});
-
-  try {
-    const cached = await getCached(loc);
-    if (cached) {
-      set({ bundle: cached, current: loc });
-      applySky(cached);
-      renderMain(main, cached);
-    }
-  } catch {
-    /* no cache */
-  }
-
-  set({ current: loc, loading: true, error: null });
-  try {
-    const b = await getWeather(loc, false);
-    set({ bundle: b, loading: false });
-    applySky(b);
-    renderMain(main, b);
-  } catch (err) {
-    set({ loading: false, error: String(err) });
-    renderError(main, () => void selectLocation(loc));
-  }
+  // A city picked while startup was still locating wins over the default first city.
+  if (loadSeq === seqAtStart) await loadWeather(saved[0] ?? DEFAULT, "select");
 
   const refresh = () => {
-    const cur = state.current;
-    if (!cur || state.loading) return;
-    void (async () => {
-      try {
-        const b = await getWeather(cur, false);
-        set({ bundle: b });
-        applySky(b);
-        renderMain(main, b);
-      } catch {
-        /* keep last bundle */
-      }
-    })();
+    if (state.current) void loadWeather(state.current, "refresh");
   };
-
-  // Hiding the window to the tray (Keep ready mode) does not make WebView2 report the page as hidden,
-  // so the backend tells us, and every animation that watches document.hidden pauses.
-  installHiddenOverride();
-
-  // Re-render on unit changes without refetching.
-  subscribe((s) => {
-    // Must run before the re-render below so every icon picks up the new style.
-    setIconStyle(s.settings.icons);
-    if (s.settings.keepAlive !== lastKeepAlive) {
-      lastKeepAlive = s.settings.keepAlive;
-      void setKeepAlive(lastKeepAlive === "on");
-    }
-    if (s.settings.alertNotifications !== lastAlertNotifications) {
-      lastAlertNotifications = s.settings.alertNotifications;
-      void setAlertNotifications(lastAlertNotifications === "on");
-    }
-    fx?.setSmooth(s.settings.fps === "60");
-    glass?.setSmooth(s.settings.fps === "60");
-    if (s.bundle && s.settings) {
-      const m = currentMain;
-      if (m && m.querySelector("#grid")) renderMain(m, s.bundle);
-    }
-  });
 
   setInterval(refresh, 10 * 60 * 1000);
   document.addEventListener("visibilitychange", () => {
