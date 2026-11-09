@@ -39,3 +39,4 @@ tools/ds.py
 release-test/
 *-setup.exe
 *-setup.exe.sig
+tools/pre-push-guard.sh
