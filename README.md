@@ -48,6 +48,10 @@ npm run tauri build -- --no-bundle     # just the exe
 
 Rust checks: `cd src-tauri && cargo test && cargo clippy -- -D warnings`. Frontend: `npx tsc --noEmit`.
 
+## Updates
+
+Skylark checks GitHub Releases for a new version once a day and always asks before installing; "Check for updates" in Settings > About checks immediately. Installers are not code-signed, so Windows SmartScreen may warn on first install ("More info" -> "Run anyway").
+
 ## Data sources
 
 - Weather, nowcast, air quality and geocoding: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0; the free API is for non-commercial use)

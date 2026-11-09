@@ -28,6 +28,8 @@ import {
   setCurrentLocation,
   setKeepAlive,
   setAlertNotifications,
+  checkUpdate,
+  installUpdate,
 } from "./api";
 import { state, set, subscribe, type LoadState, type State } from "./state";
 import { renderHero } from "./ui/hero";
@@ -57,6 +59,15 @@ let glass: Glass | null = null;
 let skyFront = 0;
 let skyEls: HTMLDivElement[] = [];
 let currentMain: HTMLElement | null = null;
+
+const UPDATE_CHECK_DELAY = 10_000;
+const UPDATE_CHECK_EVERY = 24 * 60 * 60 * 1000;
+const UPDATE_CHECKED_AT = "skylark.updateCheckedAt";
+
+let updateCheckScheduled = false;
+let updateBar: HTMLElement | null = null;
+let availableUpdate: { version: string } | null = null;
+let updateDismissed = false;
 
 // The browser's own menu (Back, Print, Save as) has no place in an app.
 document.addEventListener("contextmenu", (e) => {
@@ -170,6 +181,97 @@ function renderMain(main: HTMLElement, b: WeatherBundle): void {
     if (tile?.dataset.detail) openDetail(tile.dataset.detail as DetailKind, b, state.settings, tile, tile.dataset.day ? Number(tile.dataset.day) : undefined);
   });
   main.appendChild(grid);
+  renderUpdateBar(main);
+  scheduleUpdateCheck();
+}
+
+function removeUpdateBar(): void {
+  updateBar?.remove();
+  updateBar = null;
+}
+
+/** Shows (or drops) the update bar at the bottom of the main pane. */
+function renderUpdateBar(main: HTMLElement): void {
+  removeUpdateBar();
+  const update = availableUpdate;
+  if (!update || updateDismissed) return;
+
+  const bar = document.createElement("div");
+  bar.className = "update-bar";
+  bar.setAttribute("role", "status");
+
+  const text = document.createElement("span");
+  text.className = "update-bar-text";
+  text.textContent = `Skylark ${update.version} is available`;
+
+  const actions = document.createElement("div");
+  actions.className = "update-bar-actions";
+
+  const install = document.createElement("button");
+  install.type = "button";
+  install.className = "update-bar-btn update-bar-install";
+  install.textContent = "Install and restart";
+
+  const later = document.createElement("button");
+  later.type = "button";
+  later.className = "update-bar-btn update-bar-later";
+  later.textContent = "Later";
+
+  install.addEventListener("click", () => {
+    install.disabled = true;
+    later.disabled = true;
+    install.textContent = "Installing...";
+    text.textContent = `Installing Skylark ${update.version}...`;
+    void installUpdate().catch(() => {
+      install.disabled = false;
+      later.disabled = false;
+      install.textContent = "Install and restart";
+      text.textContent = "Could not install the update";
+    });
+  });
+
+  later.addEventListener("click", () => {
+    updateDismissed = true;
+    removeUpdateBar();
+  });
+
+  actions.append(install, later);
+  bar.append(text, actions);
+  main.appendChild(bar);
+  updateBar = bar;
+}
+
+/** Runs once the first weather is on screen, so startup is not delayed by the network. */
+function scheduleUpdateCheck(): void {
+  if (updateCheckScheduled) return;
+  updateCheckScheduled = true;
+  window.setTimeout(() => void autoCheckForUpdate(), UPDATE_CHECK_DELAY);
+}
+
+async function autoCheckForUpdate(): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+
+  try {
+    const last = Number(window.localStorage.getItem(UPDATE_CHECKED_AT));
+    if (Number.isFinite(last) && Date.now() - last < UPDATE_CHECK_EVERY) return;
+  } catch {
+    /* Storage unavailable: let the check run anyway. */
+  }
+  try {
+    window.localStorage.setItem(UPDATE_CHECKED_AT, String(Date.now()));
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const update = await checkUpdate();
+    if (!update) return;
+    availableUpdate = update;
+    updateDismissed = false;
+    if (currentMain) renderUpdateBar(currentMain);
+  } catch {
+    /* Automatic checks are best effort; failures stay invisible. */
+  }
 }
 
 function renderPlaceholder(main: HTMLElement, text: string): void {

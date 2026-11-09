@@ -5,6 +5,7 @@ import { icon } from "../icons";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { checkUpdate, installUpdate, type UpdateInfo } from "../api";
 
 const CC_BY = "https://creativecommons.org/licenses/by/4.0/";
 const appVersion = getVersion().catch(() => "");
@@ -22,6 +23,110 @@ let bodyEl: HTMLElement | null = null;
 let trigger: HTMLElement | null = null;
 let autostart: boolean | null = null;
 let lastSettings = state.settings;
+
+type UpdatePhase = "idle" | "checking" | "up-to-date" | "available" | "installing" | "error";
+
+let updatePhase: UpdatePhase = "idle";
+let updateError = "Could not check for updates";
+let availableUpdate: UpdateInfo | null = null;
+let updateStatusEl: HTMLElement | null = null;
+let updateCheckBtn: HTMLButtonElement | null = null;
+let updateInstallBtn: HTMLButtonElement | null = null;
+
+function paintUpdate(): void {
+  const status = updateStatusEl;
+  const check = updateCheckBtn;
+  const install = updateInstallBtn;
+  if (!status || !check || !install) return;
+
+  const busy = updatePhase === "checking" || updatePhase === "installing";
+  check.disabled = busy;
+  install.disabled = busy;
+
+  let text = "";
+  switch (updatePhase) {
+    case "checking":
+      text = "Checking...";
+      break;
+    case "up-to-date":
+      text = "You're up to date";
+      break;
+    case "available":
+      text = `Version ${availableUpdate?.version ?? ""} is available`;
+      break;
+    case "installing":
+      text = "Installing...";
+      break;
+    case "error":
+      text = updateError;
+      break;
+  }
+  status.textContent = text;
+  status.hidden = text === "";
+  status.classList.toggle("muted", updatePhase === "error");
+
+  check.hidden = updatePhase === "available" || updatePhase === "installing";
+  install.hidden = updatePhase !== "available" && updatePhase !== "installing";
+  install.textContent = updatePhase === "installing" ? "Installing..." : "Install and restart";
+}
+
+async function runUpdateCheck(): Promise<void> {
+  if (updatePhase === "checking" || updatePhase === "installing") return;
+  updatePhase = "checking";
+  paintUpdate();
+  try {
+    const found = await checkUpdate();
+    availableUpdate = found;
+    updatePhase = found ? "available" : "up-to-date";
+  } catch {
+    availableUpdate = null;
+    updateError = "Could not check for updates";
+    updatePhase = "error";
+  }
+  paintUpdate();
+}
+
+async function runInstall(): Promise<void> {
+  if (updatePhase === "checking" || updatePhase === "installing") return;
+  updatePhase = "installing";
+  paintUpdate();
+  try {
+    await installUpdate();
+    // Normally the app restarts before this resolves; if it does not, the update is installed.
+    availableUpdate = null;
+    updatePhase = "up-to-date";
+  } catch {
+    updateError = "Could not install the update";
+    updatePhase = "error";
+  }
+  paintUpdate();
+}
+
+function appendUpdate(box: HTMLElement): void {
+  const wrap = document.createElement("div");
+  wrap.className = "about-update";
+
+  updateStatusEl = document.createElement("div");
+  updateStatusEl.className = "about-update-status";
+  updateStatusEl.setAttribute("role", "status");
+  updateStatusEl.setAttribute("aria-live", "polite");
+
+  updateCheckBtn = document.createElement("button");
+  updateCheckBtn.type = "button";
+  updateCheckBtn.className = "about-update-btn";
+  updateCheckBtn.textContent = "Check for updates";
+  updateCheckBtn.addEventListener("click", () => void runUpdateCheck());
+
+  updateInstallBtn = document.createElement("button");
+  updateInstallBtn.type = "button";
+  updateInstallBtn.className = "about-update-btn";
+  updateInstallBtn.textContent = "Install and restart";
+  updateInstallBtn.addEventListener("click", () => void runInstall());
+
+  wrap.append(updateStatusEl, updateCheckBtn, updateInstallBtn);
+  box.appendChild(wrap);
+  paintUpdate();
+}
 
 function externalLink(href: string, label: string): HTMLAnchorElement {
   const link = document.createElement("a");
@@ -44,6 +149,8 @@ function appendAbout(box: HTMLElement): void {
     if (v) version.textContent = `Skylark ${v}`;
   });
   box.appendChild(version);
+
+  appendUpdate(box);
 
   const repo = document.createElement("div");
   repo.className = "about-repo";

@@ -5,6 +5,7 @@ mod regions;
 mod store;
 mod tiles;
 mod tray;
+mod update;
 mod weather;
 mod wind;
 
@@ -28,6 +29,8 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         // Restores size and position whenever the main window is (re)created.
         .plugin(tauri_plugin_window_state::Builder::new().with_state_flags(WINDOW_STATE).build())
         .plugin(tauri_plugin_autostart::init(
@@ -57,6 +60,8 @@ pub fn run() {
             climate::get_normal,
             wind::get_wind_grid,
             alerts::get_alerts,
+            update::check_update,
+            update::install_update,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event

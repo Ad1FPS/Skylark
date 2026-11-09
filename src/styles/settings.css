@@ -171,6 +171,93 @@
   font-weight: 500;
 }
 
+.about-update {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+
+.about-update-status {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.about-update-status.muted {
+  color: var(--text-3);
+}
+
+.about-update-btn,
+.update-bar-btn {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: background 140ms var(--ease);
+}
+
+.about-update-btn:hover:not(:disabled),
+.update-bar-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.about-update-btn:focus-visible,
+.update-bar-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.about-update-btn:disabled,
+.update-bar-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.update-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: auto;
+  padding: 9px 10px 9px 14px;
+  font-size: 13px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.update-bar-text {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.update-bar-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.update-bar-install {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.update-bar-later {
+  color: var(--text-2);
+  background: transparent;
+}
+
 .about-repo {
   margin-top: 2px;
   font-size: 11px;

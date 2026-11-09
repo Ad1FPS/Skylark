@@ -50,7 +50,8 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        std::env::temp_dir().join(format!("skylark_test_{tag}_{nanos}"))
+        // Under target/ rather than the system temp folder, which sandboxed runs may not be allowed to write.
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("test-tmp").join(format!("skylark_test_{tag}_{nanos}"))
     }
 
     fn sample() -> WeatherBundle {

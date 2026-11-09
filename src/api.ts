@@ -117,3 +117,27 @@ export async function setAlertNotifications(on: boolean): Promise<void> {
     /* not running inside the app */
   }
 }
+
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  notes: string | null;
+  date: string | null;
+}
+
+/** Only the desktop app can reach the updater; the browser preview rejects like any other call. */
+function hasTauri(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+/** Returns the available update, or null when this is the newest version. */
+export function checkUpdate(): Promise<UpdateInfo | null> {
+  if (!hasTauri()) return Promise.reject(new Error("updates are only available in the app"));
+  return invoke<UpdateInfo | null>("check_update");
+}
+
+/** Downloads the pending update and restarts; resolves only if the app does not restart. */
+export function installUpdate(): Promise<void> {
+  if (!hasTauri()) return Promise.reject(new Error("updates are only available in the app"));
+  return invoke<void>("install_update");
+}
