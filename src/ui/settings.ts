@@ -28,6 +28,8 @@ type UpdatePhase = "idle" | "checking" | "up-to-date" | "available" | "installin
 
 let updatePhase: UpdatePhase = "idle";
 let updateError = "Could not check for updates";
+/** The backend's short reason, shown on hover so a failed check can be diagnosed. */
+let updateErrorDetail = "";
 let availableUpdate: UpdateInfo | null = null;
 let updateStatusEl: HTMLElement | null = null;
 let updateCheckBtn: HTMLButtonElement | null = null;
@@ -62,6 +64,7 @@ function paintUpdate(): void {
       break;
   }
   status.textContent = text;
+  status.title = updatePhase === "error" ? updateErrorDetail : "";
   status.hidden = text === "";
   status.classList.toggle("muted", updatePhase === "error");
 
@@ -78,9 +81,10 @@ async function runUpdateCheck(): Promise<void> {
     const found = await checkUpdate();
     availableUpdate = found;
     updatePhase = found ? "available" : "up-to-date";
-  } catch {
+  } catch (err) {
     availableUpdate = null;
     updateError = "Could not check for updates";
+    updateErrorDetail = String(err);
     updatePhase = "error";
   }
   paintUpdate();
@@ -95,8 +99,9 @@ async function runInstall(): Promise<void> {
     // Normally the app restarts before this resolves; if it does not, the update is installed.
     availableUpdate = null;
     updatePhase = "up-to-date";
-  } catch {
+  } catch (err) {
     updateError = "Could not install the update";
+    updateErrorDetail = String(err);
     updatePhase = "error";
   }
   paintUpdate();
