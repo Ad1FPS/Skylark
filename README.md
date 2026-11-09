@@ -16,6 +16,10 @@ Built with Tauri 2 (WebView2), a Rust backend and a vanilla TypeScript + plain C
 |---|---|
 | ![Day popover](screenshots/popover-day.jpg) | ![Expanded radar](screenshots/radar-expanded.jpg) |
 
+| Settings | Weather alert |
+|---|---|
+| ![Settings](screenshots/settings.jpg) | ![Weather alert](screenshots/alerts.jpg) |
+
 All tiles:
 
 ![All tiles](screenshots/all-tiles.jpg)

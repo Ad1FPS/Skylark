@@ -20,6 +20,15 @@ const URL = "http://localhost:1420/";
 const VIEWPORT = { width: 1280, height: 800 };
 const TOTAL_TIMEOUT_MS = 4 * 60 * 1000;
 const SETTLE_MS = 8000;
+// The app sends this User-Agent when it proxies OSM tiles; the browser preview sends it
+// directly, and the tile server rejects anonymous clients.
+const TILE_USER_AGENT = "Skylark/0.1.0 (+https://github.com/Ad1FPS/Skylark)";
+// dev-mock.js makes osmTileUrl() return the app's custom-scheme proxy URL, which only the
+// Tauri backend serves. In the browser preview we answer those requests ourselves over CDP.
+const TILE_PROXY_ORIGIN = "http://osmtile.localhost";
+const TILE_UPSTREAM = "https://tile.openstreetmap.org";
+const TILE_CONCURRENCY = 6;
+const TILE_TIMEOUT_MS = 15000;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -157,6 +166,7 @@ class CDP {
     this.ws = new WebSocket(url);
     this.nextId = 1;
     this.pending = new Map();
+    this.listeners = new Map();
 
     this.ws.addEventListener("message", (event) => {
       let msg;
@@ -171,6 +181,16 @@ class CDP {
         this.pending.delete(msg.id);
         if (msg.error) pending.reject(new Error(`${pending.method}: ${msg.error.message}`));
         else pending.resolve(msg.result);
+        return;
+      }
+      if (typeof msg.method !== "string") return;
+      const handlers = this.listeners.get(msg.method);
+      for (const handler of handlers ?? []) {
+        Promise.resolve()
+          .then(() => handler(msg.params ?? {}))
+          .catch((err) => {
+            console.error(`screenshots: ${msg.method} handler failed: ${err?.stack ?? err}`);
+          });
       }
     });
     this.ws.addEventListener("close", () => {
@@ -216,12 +236,120 @@ class CDP {
     });
   }
 
+  on(method, handler) {
+    const handlers = this.listeners.get(method);
+    if (handlers) handlers.push(handler);
+    else this.listeners.set(method, [handler]);
+  }
+
   close() {
     try {
       this.ws.close();
     } catch {
       /* already closed */
     }
+  }
+}
+
+// --- Tile proxy -------------------------------------------------------------------------
+// The page asks for http://osmtile.localhost/{z}/{x}/{y}.png. Those requests are paused
+// over CDP and answered from the public OSM tile server, which needs the app's User-Agent.
+// Tiles are cached for the whole run because several screenshots reuse the same map view.
+
+const tileCache = new Map();
+let tileActive = 0;
+const tileWaiting = [];
+
+function withTileSlot(task) {
+  return new Promise((resolve, reject) => {
+    tileWaiting.push({ task, resolve, reject });
+    pumpTileQueue();
+  });
+}
+
+function pumpTileQueue() {
+  while (tileActive < TILE_CONCURRENCY && tileWaiting.length > 0) {
+    const job = tileWaiting.shift();
+    tileActive++;
+    Promise.resolve()
+      .then(job.task)
+      .then(job.resolve, job.reject)
+      .finally(() => {
+        tileActive--;
+        pumpTileQueue();
+      });
+  }
+}
+
+function getTile(z, x, y) {
+  const key = `${z}/${x}/${y}`;
+  const cached = tileCache.get(key);
+  if (cached) return cached;
+
+  const pending = withTileSlot(async () => {
+    const res = await fetch(`${TILE_UPSTREAM}/${z}/${x}/${y}.png`, {
+      headers: {
+        "User-Agent": TILE_USER_AGENT,
+        Accept: "image/png,image/*;q=0.8,*/*;q=0.5",
+      },
+      signal: AbortSignal.timeout(TILE_TIMEOUT_MS),
+    });
+    const body = Buffer.from(await res.arrayBuffer()).toString("base64");
+    return { status: res.status, body };
+  });
+
+  tileCache.set(key, pending);
+  pending.catch(() => {
+    // Do not cache failures; a later shot may retry the same tile.
+    if (tileCache.get(key) === pending) tileCache.delete(key);
+  });
+  return pending;
+}
+
+async function handleTileRequest(cdp, params) {
+  const { requestId, request } = params;
+  let match = null;
+  try {
+    const url = new globalThis.URL(request.url);
+    if (url.origin === TILE_PROXY_ORIGIN) match = url.pathname.match(/^\/(\d+)\/(\d+)\/(\d+)\.png$/);
+  } catch {
+    /* fall through and fail the malformed request */
+  }
+  if (!match) {
+    try {
+      await cdp.send("Fetch.failRequest", { requestId, errorReason: "Failed" });
+    } catch {
+      /* request already gone */
+    }
+    return;
+  }
+
+  const [, z, x, y] = match;
+  let tile;
+  try {
+    tile = await getTile(z, x, y);
+  } catch (err) {
+    console.warn(`screenshots: tile ${z}/${x}/${y} failed: ${err.message}`);
+    try {
+      await cdp.send("Fetch.failRequest", { requestId, errorReason: "Failed" });
+    } catch {
+      /* request already gone */
+    }
+    return;
+  }
+
+  try {
+    await cdp.send("Fetch.fulfillRequest", {
+      requestId,
+      responseCode: tile.status,
+      responseHeaders: [
+        { name: "Content-Type", value: "image/png" },
+        { name: "Access-Control-Allow-Origin", value: "*" },
+      ],
+      body: tile.body,
+    });
+  } catch (err) {
+    console.warn(`screenshots: could not fulfil tile ${z}/${x}/${y}: ${err.message}`);
   }
 }
 
@@ -289,12 +417,19 @@ async function setViewport(cdp, width, height) {
   });
 }
 
-async function capture(cdp, name) {
-  const { data } = await cdp.send("Page.captureScreenshot", {
-    format: "jpeg",
-    quality: 85,
-    fromSurface: true,
-  });
+async function capture(cdp, evaluate, name, { keepFocus = false, beyondViewport = false } = {}) {
+  // Clicking a city row or a control leaves focus on it, which would draw a focus ring in
+  // the shot. No popover or modal captured here needs focus to stay open, so blur by default;
+  // keepFocus is there for a shot whose open state would die with the focus.
+  if (!keepFocus) {
+    await evaluate(`document.activeElement?.blur()`, {
+      awaitPromise: false,
+      label: `clear focus before ${name}`,
+    });
+  }
+  const params = { format: "jpeg", quality: 85, fromSurface: true };
+  if (beyondViewport) params.captureBeyondViewport = true;
+  const { data } = await cdp.send("Page.captureScreenshot", params);
   const file = path.join(SHOTS, `${name}.jpg`);
   const buffer = Buffer.from(data, "base64");
   await fsp.writeFile(file, buffer);
@@ -380,11 +515,18 @@ async function run() {
   const target = await getPageTarget(port);
   const cdp = new CDP(target.webSocketDebuggerUrl);
   await cdp.open();
+  cdp.on("Fetch.requestPaused", (params) => handleTileRequest(cdp, params));
 
   const evaluate = makeEvaluator(cdp);
   const wait = (expression, timeoutMs, label) => waitFor(evaluate, expression, timeoutMs, label);
 
   try {
+    // Right after attaching: identify the app to the OSM tile server before any tile loads.
+    await cdp.send("Network.enable");
+    await cdp.send("Network.setUserAgentOverride", { userAgent: TILE_USER_AGENT });
+    await cdp.send("Fetch.enable", {
+      patterns: [{ urlPattern: `${TILE_PROXY_ORIGIN}/*`, requestStage: "Request" }],
+    });
     await cdp.send("Page.enable");
     await cdp.send("Runtime.enable");
     await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: true });
@@ -431,7 +573,7 @@ async function run() {
 
     // 1. Clear day (Tokyo is the clear-day variant in dev-mock's saved cities).
     await settle();
-    await capture(cdp, "clear-day");
+    await capture(cdp, evaluate, "clear-day");
 
     // 2. Day popover: first row of the 10-day forecast.
     await evaluate(`document.querySelector(".daily-row")?.click()`, {
@@ -440,7 +582,7 @@ async function run() {
     });
     await wait(`!!document.querySelector(".popover")`, 10000, "day popover");
     await sleep(1200);
-    await capture(cdp, "popover-day");
+    await capture(cdp, evaluate, "popover-day");
     await evaluate(`document.querySelector(".daily-row")?.click()`, {
       awaitPromise: false,
       label: "close day popover",
@@ -454,14 +596,15 @@ async function run() {
     });
     await wait(`!!document.querySelector(".settings-backdrop.open")`, 10000, "settings modal");
     await sleep(1200);
-    await capture(cdp, "settings");
+    await capture(cdp, evaluate, "settings");
     await evaluate(`document.querySelector(".settings-close")?.click()`, {
       awaitPromise: false,
       label: "close settings",
     });
     await wait(`!document.querySelector(".settings-backdrop.open")`, 10000, "settings closed");
 
-    // 4. Weather alert pill + its detail popover (Tokyo has alerts in dev-mock).
+    // 4. Weather alert pill + its detail popover (Miami has the alert variants in dev-mock).
+    await selectCity(evaluate, wait, "Miami");
     await wait(`!!document.querySelector(".alert-pill")`, 15000, "alert pill");
     await evaluate(`document.querySelector(".alert-pill")?.click()`, {
       awaitPromise: false,
@@ -469,17 +612,17 @@ async function run() {
     });
     await wait(`!!document.querySelector(".popover")`, 10000, "alert popover");
     await sleep(1200);
-    await capture(cdp, "alerts");
+    await capture(cdp, evaluate, "alerts");
     await pressEscape(cdp);
     await wait(`!document.querySelector(".popover")`, 10000, "alert popover closed");
 
     // 5. Rain at night.
     await selectCity(evaluate, wait, "Seattle");
-    await capture(cdp, "rain-night");
+    await capture(cdp, evaluate, "rain-night");
 
     // 6. Clear night.
     await selectCity(evaluate, wait, "Oslo");
-    await capture(cdp, "clear-night");
+    await capture(cdp, evaluate, "clear-night");
 
     // 7. Snow during the day: no saved city is snow-at-day, so force the scene.
     await selectCity(evaluate, wait, "Reykjavik");
@@ -488,21 +631,22 @@ async function run() {
       label: "force snow day scene",
     });
     await settle();
-    await capture(cdp, "snow-day");
+    await capture(cdp, evaluate, "snow-day");
 
     // 8. Thunderstorm at night.
     await selectCity(evaluate, wait, "Miami");
-    await capture(cdp, "storm-night");
+    await capture(cdp, evaluate, "storm-night");
 
-    // 9. Expanded radar over a clear day; tiles need time to load.
-    await selectCity(evaluate, wait, "Tokyo");
+    // 9. Expanded radar over a clear day in Europe, so the base map shows recognisable land;
+    // tiles need time to load.
+    await selectCity(evaluate, wait, "Lisbon");
     await evaluate(`document.querySelector(".radar-expand")?.click()`, {
       awaitPromise: false,
       label: "expand radar",
     });
     await wait(`!!document.querySelector(".radar.expanded")`, 10000, "expanded radar");
     await settle(10000);
-    await capture(cdp, "radar-expanded");
+    await capture(cdp, evaluate, "radar-expanded");
 
     // 10. All tiles: grow the viewport to the main pane's full scroll height.
     await evaluate(`document.querySelector(".radar-expand")?.click()`, {
@@ -520,18 +664,7 @@ async function run() {
     console.log(`screenshots: all-tiles viewport height ${tall}px`);
     await setViewport(cdp, VIEWPORT.width, tall);
     await sleep(1200);
-    const { data } = await cdp.send("Page.captureScreenshot", {
-      format: "jpeg",
-      quality: 85,
-      fromSurface: true,
-      captureBeyondViewport: true,
-    });
-    const file = path.join(SHOTS, "all-tiles.jpg");
-    const buffer = Buffer.from(data, "base64");
-    await fsp.writeFile(file, buffer);
-    const kb = buffer.length / 1024;
-    const size = kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(1)} KB`;
-    console.log(`screenshots/all-tiles.jpg  ${size}`);
+    await capture(cdp, evaluate, "all-tiles", { beyondViewport: true });
     await setViewport(cdp, VIEWPORT.width, VIEWPORT.height);
 
     cdp.close();
