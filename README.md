@@ -22,18 +22,28 @@ All tiles:
 
 ## Features
 
-- Current conditions, hourly strip (switch between conditions, chance of rain and wind), 10-day forecast, 15-minute rain nowcast
-- Precipitation radar with a 60 minute nowcast, pan, zoom and play, and an expanded view that gives the map half the window
+- Current conditions, an hourly strip that switches between conditions, chance of rain and wind, a 10-day forecast and a 15-minute rain nowcast
+- Precipitation radar from LibreWXR with a 60 minute nowcast, pan, zoom and play, and an expanded view that gives the map half the window
+- Official weather alerts for the US (National Weather Service), Canada (Environment and Climate Change Canada), Germany (DWD) and 38 other European countries via MeteoAlarm: a coloured pill under the city name, a detail popover with the full text and instructions, a warning mark on the city in the sidebar, and optional system notifications for new moderate-or-worse warnings. The source is picked automatically from the location's country; European region names come from a Nominatim reverse lookup
 - Tiles for air quality, UV, sun, wind, moon phase, averages (today's high versus the 10-year normal), precipitation, feels like, humidity, visibility and pressure; each opens a popover next to it, and the 10-day rows and hourly card open a per-day Conditions popover
-- Official weather alerts for the US (National Weather Service), Canada (Environment and Climate Change Canada), Germany (DWD) and the rest of Europe (MeteoAlarm): a coloured pill under the city name, a detail popover with the full text and instructions, a warning mark on the city in the sidebar, and optional system notifications for new moderate-or-worse warnings. The source is picked automatically from the location's country; European region names come from a Nominatim reverse lookup
 - Wind map: animated streamlines over a dark map for the next 24 hours, coloured by speed
-- Animated sky that follows the time of day: sun with a faint halo, moon, stars, clouds, rain (with droplets running down the tiles), snow, fog, lightning; optional 60 fps mode
+- Animated sky that follows the time of day: sun with a faint halo, moon, stars, clouds, rain running down the glass, snow, fog, lightning; optional 60 fps mode
 - Weather icons as line drawings or in colour
 - Saved cities with live local time and their own animated sky (drifting clouds, rain, snow, stars), search, and "Use my location" (IP based)
-- Units: C/F, km/h, mph, m/s, 12/24 h; optional start with Windows (launches into the tray)
+- Settings and About in one window opened from the gear in the title bar (or Ctrl+,): units, icon style and frame rate, keep-ready-when-closed, start with Windows, alert notifications, updates and data-source credits
+- Units: C/F, km/h, mph, m/s, 12/24 h
 - Tray-resident: closing the window frees the webview (about 6 MB); the tray icon or a second launch brings it back, and the current location refreshes every 15 minutes in the background. "Keep ready when closed" hides the window instead, so it reopens instantly at the cost of about 110 MB
+- Automatic updates: a daily check of GitHub Releases, an update bar that always asks before installing, and "Check for updates" in Settings > About
 
-The release exe is about 5 MB; the installer is about 1.6 MB.
+The release exe is about 6 MB; the installer is about 2 MB.
+
+## Install
+
+Download `Skylark_0.1.0_x64-setup.exe` from [GitHub Releases](https://github.com/Ad1FPS/Skylark/releases/latest) and run it.
+
+Skylark runs on Windows 10 and 11 with Microsoft Edge WebView2 (included with Windows 11; on Windows 10, install the WebView2 Runtime if Skylark does not start).
+
+The installer is not code-signed, so Windows SmartScreen may show "Windows protected your PC" on first run: click "More info", then "Run anyway".
 
 ## Build
 
@@ -50,13 +60,13 @@ Rust checks: `cd src-tauri && cargo test && cargo clippy -- -D warnings`. Fronte
 
 ## Updates
 
-Skylark checks GitHub Releases for a new version once a day and always asks before installing; "Check for updates" in Settings > About checks immediately. Installers are not code-signed, so Windows SmartScreen may warn on first install ("More info" -> "Run anyway").
+Skylark checks GitHub Releases for a new version once a day and shows an update bar; it always asks before installing, and "Check for updates" in Settings > About checks immediately.
 
 ## Data sources
 
 - Weather, nowcast, air quality and geocoding: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0; the free API is for non-commercial use)
 - Radar: [LibreWXR](https://librewxr.net/) (CC BY 4.0; national radar composites plus a 60 minute nowcast; Italian radar © Radar-DPC)
-- Alerts: [National Weather Service](https://www.weather.gov/documentation/services-web-api) (US), [Environment and Climate Change Canada](https://weather.gc.ca/) (Canada; Data Source: Environment and Climate Change Canada), the German Weather Service (DWD) via [Bright Sky](https://brightsky.dev/), and [MeteoAlarm](https://meteoalarm.org/) (EUMETNET) for the rest of Europe; European region names are resolved with [Nominatim](https://nominatim.openstreetmap.org/) © OpenStreetMap contributors. Alerts are shown as published, in an emergency follow your local authorities
+- Alerts: [National Weather Service](https://www.weather.gov/documentation/services-web-api) (US), [Environment and Climate Change Canada](https://weather.gc.ca/) (Canada; Data Source: Environment and Climate Change Canada), the German Weather Service (DWD) via [Bright Sky](https://brightsky.dev/), and [MeteoAlarm](https://meteoalarm.org/) (EUMETNET) for 38 other European countries; European region names are resolved with [Nominatim](https://nominatim.openstreetmap.org/) © OpenStreetMap contributors. Alerts are shown as published, in an emergency follow your local authorities
 - Map tiles: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors
 - IP location: [ipwho.is](https://ipwho.is/)
 
