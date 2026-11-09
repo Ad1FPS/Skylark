@@ -25,3 +25,17 @@ dist-ssr
 dev-mock.js
 .ds_last.txt
 release-test/
+
+# Internal working files (kept locally, not published)
+.agent/
+specs/
+Reference Imagfes/
+.claude/
+ROADMAP.md
+PROGRESS.md
+PLAN.md
+HANDOFF.md
+tools/ds.py
+release-test/
+*-setup.exe
+*-setup.exe.sig
