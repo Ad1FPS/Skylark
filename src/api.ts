@@ -83,12 +83,20 @@ export interface Alert {
   source: string;
 }
 
-export async function getAlerts(location: Location): Promise<Alert[]> {
+export interface AlertsResponse {
+  /** False when the location's country has no official alert provider. */
+  covered: boolean;
+  alerts: Alert[];
+}
+
+export async function getAlerts(location: Location): Promise<AlertsResponse> {
   try {
-    const alerts = await invoke<Alert[]>("get_alerts", { location });
-    return Array.isArray(alerts) ? alerts : [];
+    const response = await invoke<AlertsResponse>("get_alerts", { location });
+    const alerts = Array.isArray(response?.alerts) ? response.alerts : [];
+    return { covered: response?.covered === true, alerts };
   } catch {
-    return [];
+    // Leave coverage optimistic on failures so a network error is not mistaken for an unsupported country.
+    return { covered: true, alerts: [] };
   }
 }
 

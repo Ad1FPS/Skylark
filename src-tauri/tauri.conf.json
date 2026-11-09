@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://osmtile.localhost https://api.librewxr.net https://*.librewxr.net; connect-src 'self' ipc: http://ipc.localhost https://api.librewxr.net https://*.librewxr.net; font-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'"
     }
   },
   "bundle": {

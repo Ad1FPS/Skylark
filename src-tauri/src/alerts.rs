@@ -11,6 +11,7 @@ use crate::weather::Location;
 const NWS_URL: &str = "https://api.weather.gov/alerts/active";
 const BRIGHTSKY_URL: &str = "https://api.brightsky.dev/alerts";
 const METEOALARM_URL: &str = "https://feeds.meteoalarm.org/api/v1/warnings";
+const ECCC_URL: &str = "https://api.weather.gc.ca/collections/weather-alerts/items";
 pub(crate) const APP_USER_AGENT: &str =
     "(Skylark weather app, https://github.com/Ad1FPS/Skylark)";
 const CACHE_TTL_SECS: i64 = 300;
@@ -18,6 +19,7 @@ const METEOALARM_CACHE_TTL_SECS: i64 = 600;
 const DWD_SENDER: &str = "Deutscher Wetterdienst";
 const METEOALARM_SENDER: &str = "MeteoAlarm (EUMETNET)";
 const METEOALARM_SOURCE: &str = "Meteoalarm";
+const ECCC_SOURCE: &str = "Environment and Climate Change Canada";
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -34,6 +36,14 @@ pub struct Alert {
     pub source: String,
 }
 
+/// The alerts themselves plus whether the location's country has an official provider.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AlertsResponse {
+    pub covered: bool,
+    pub alerts: Vec<Alert>,
+}
+
 #[derive(Default)]
 pub struct AlertCache {
     /// Parsed alerts per location, cheap to serve for a few minutes.
@@ -45,6 +55,7 @@ pub struct AlertCache {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Provider {
     Nws,
+    Eccc,
     Dwd,
     Meteoalarm(&'static str),
 }
@@ -60,6 +71,7 @@ pub fn provider_for(country: &str) -> Option<Provider> {
     let c = country.trim().to_lowercase();
     let slug = match c.as_str() {
         "united states" | "united states of america" | "usa" | "us" => return Some(Provider::Nws),
+        "canada" | "ca" => return Some(Provider::Eccc),
         "germany" | "deutschland" | "de" => return Some(Provider::Dwd),
         "andorra" => "andorra",
         "austria" => "austria",
@@ -114,11 +126,13 @@ pub async fn get_alerts(
     http: State<'_, Http>,
     cache: State<'_, AlertCache>,
     location: Location,
-) -> Result<Vec<Alert>, String> {
+) -> Result<AlertsResponse, String> {
     if let Ok(dir) = crate::commands::data_dir(&app) {
         regions::set_data_dir(dir);
     }
-    alerts_for(&http.0, &cache, &location).await
+    let covered = provider_for(&location.country).is_some();
+    let alerts = alerts_for(&http.0, &cache, &location).await?;
+    Ok(AlertsResponse { covered, alerts })
 }
 
 /// Alerts for a location, served from the 5 minute cache when possible. Shared with the background refresh.
@@ -143,6 +157,7 @@ pub async fn alerts_for(
 
     let fetched = match provider {
         Provider::Nws => fetch_nws(http, location.latitude, location.longitude).await,
+        Provider::Eccc => fetch_eccc(http, location.latitude, location.longitude, now).await,
         Provider::Dwd => fetch_dwd(http, location.latitude, location.longitude).await,
         Provider::Meteoalarm(slug) => fetch_meteoalarm(http, cache, slug, location, now).await,
     };
@@ -196,6 +211,34 @@ async fn fetch_dwd(
     }
     let text = res.text().await.map_err(|e| e.to_string())?;
     Ok(finalize(parse_dwd(&text)))
+}
+
+async fn fetch_eccc(
+    http: &reqwest::Client,
+    latitude: f64,
+    longitude: f64,
+    now: i64,
+) -> Result<Vec<Alert>, String> {
+    let bbox = format!(
+        "{:.4},{:.4},{:.4},{:.4}",
+        longitude - 0.01,
+        latitude - 0.01,
+        longitude + 0.01,
+        latitude + 0.01
+    );
+    let url = format!("{ECCC_URL}?f=json&bbox={bbox}&limit=100");
+    let res = http
+        .get(url)
+        .header("User-Agent", APP_USER_AGENT)
+        .header("Accept", "application/geo+json")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    if !res.status().is_success() {
+        return Err(format!("eccc request failed: {}", res.status()));
+    }
+    let text = res.text().await.map_err(|e| e.to_string())?;
+    Ok(finalize(parse_eccc(&text, latitude, longitude, now)))
 }
 
 async fn fetch_meteo_raw(http: &reqwest::Client, slug: &str) -> Result<String, String> {
@@ -514,6 +557,156 @@ pub fn parse_dwd(json: &str) -> Vec<Alert> {
         });
     }
     out
+}
+
+#[derive(Deserialize)]
+struct EcccResponse {
+    #[serde(default)]
+    features: Vec<EcccFeature>,
+}
+
+#[derive(Deserialize)]
+struct EcccFeature {
+    geometry: Option<EcccGeometry>,
+    properties: Option<EcccProps>,
+}
+
+#[derive(Deserialize)]
+struct EcccGeometry {
+    #[serde(rename = "type")]
+    kind: Option<String>,
+    #[serde(default)]
+    coordinates: serde_json::Value,
+}
+
+#[derive(Deserialize)]
+struct EcccProps {
+    alert_code: Option<String>,
+    alert_name_en: Option<String>,
+    alert_short_name_en: Option<String>,
+    alert_text_en: Option<String>,
+    alert_type: Option<String>,
+    expiration_datetime: Option<String>,
+    feature_name_en: Option<String>,
+    publication_datetime: Option<String>,
+    risk_colour_en: Option<String>,
+    status_en: Option<String>,
+    validity_datetime: Option<String>,
+}
+
+/// Alerts from the ECCC OGC API that apply to a point. `now` is passed in so the fixture tests can pin the clock.
+pub fn parse_eccc(json: &str, latitude: f64, longitude: f64, now: i64) -> Vec<Alert> {
+    let Ok(response) = serde_json::from_str::<EcccResponse>(json) else {
+        return vec![];
+    };
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for feature in response.features {
+        let (Some(geometry), Some(p)) = (feature.geometry, feature.properties) else {
+            continue;
+        };
+        if p.status_en.as_deref().is_some_and(|status| {
+            status.eq_ignore_ascii_case("ended") || status.eq_ignore_ascii_case("cancelled")
+        }) {
+            continue;
+        }
+        let ends = p.expiration_datetime.as_deref().and_then(parse_iso);
+        if ends.is_some_and(|ends| ends <= now) {
+            continue;
+        }
+        if !eccc_geometry_contains(&geometry, latitude, longitude) {
+            continue;
+        }
+        let Some(code) = p
+            .alert_code
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        else {
+            continue;
+        };
+        let area = p
+            .feature_name_en
+            .as_deref()
+            .unwrap_or_default()
+            .trim()
+            .to_string();
+        let raw_name =
+            first_non_empty(&[p.alert_name_en.as_deref(), p.alert_short_name_en.as_deref()]);
+        let event = capitalize_first(&raw_name);
+        if event.is_empty() {
+            continue;
+        }
+        // Several polygons can repeat the same warning; keep one card per alert and area.
+        let dedupe_key = format!("{}|{}", code.to_lowercase(), area.to_lowercase());
+        if !seen.insert(dedupe_key) {
+            continue;
+        }
+        let onset = p
+            .validity_datetime
+            .as_deref()
+            .and_then(parse_iso)
+            .or_else(|| p.publication_datetime.as_deref().and_then(parse_iso));
+        out.push(Alert {
+            id: format!("eccc:{code}:{area}"),
+            event,
+            severity: eccc_severity(p.alert_type.as_deref(), p.risk_colour_en.as_deref()),
+            headline: area,
+            description: p.alert_text_en.unwrap_or_default(),
+            instruction: None,
+            onset,
+            ends,
+            sender: ECCC_SOURCE.to_string(),
+            source: ECCC_SOURCE.to_string(),
+        });
+    }
+    out
+}
+
+fn eccc_severity(alert_type: Option<&str>, risk_colour: Option<&str>) -> String {
+    if risk_colour.is_some_and(|colour| colour.eq_ignore_ascii_case("red")) {
+        return "extreme".to_string();
+    }
+    let mapped = match alert_type.unwrap_or_default().trim().to_lowercase().as_str() {
+        "warning" => "severe",
+        "watch" | "advisory" => "moderate",
+        // Statements and unknown types are the mildest category.
+        _ => "minor",
+    };
+    normalize_severity(Some(mapped))
+}
+
+/// GeoJSON coordinates hold `[longitude, latitude]` pairs; the point test works in `(latitude, longitude)`.
+fn eccc_geometry_contains(geometry: &EcccGeometry, latitude: f64, longitude: f64) -> bool {
+    let Some(coordinates) = geometry.coordinates.as_array() else {
+        return false;
+    };
+    match geometry.kind.as_deref() {
+        Some("Polygon") => coordinates
+            .first()
+            .and_then(eccc_ring)
+            .is_some_and(|ring| point_in_polygon(latitude, longitude, &ring)),
+        Some("MultiPolygon") => coordinates.iter().any(|polygon| {
+            polygon
+                .as_array()
+                .and_then(|rings| rings.first())
+                .and_then(eccc_ring)
+                .is_some_and(|ring| point_in_polygon(latitude, longitude, &ring))
+        }),
+        _ => false,
+    }
+}
+
+fn eccc_ring(value: &serde_json::Value) -> Option<Vec<(f64, f64)>> {
+    let points: Vec<(f64, f64)> = value
+        .as_array()?
+        .iter()
+        .filter_map(|point| {
+            let pair = point.as_array()?;
+            Some((pair.get(1)?.as_f64()?, pair.first()?.as_f64()?))
+        })
+        .collect();
+    (points.len() >= 3).then_some(points)
 }
 
 #[derive(Deserialize)]
@@ -857,8 +1050,8 @@ fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        Alert, Provider, names_match, parse_dwd, parse_iso, parse_meteoalarm, parse_nws,
-        point_in_polygon, provider_for, sort_alerts,
+        Alert, Provider, names_match, parse_dwd, parse_eccc, parse_iso, parse_meteoalarm,
+        parse_nws, point_in_polygon, provider_for, sort_alerts,
     };
 
     #[test]
@@ -880,6 +1073,9 @@ mod tests {
         }
         for c in ["Germany", "deutschland", " DE "] {
             assert_eq!(provider_for(c), Some(Provider::Dwd), "{c}");
+        }
+        for c in ["Canada", "canada", " CA "] {
+            assert_eq!(provider_for(c), Some(Provider::Eccc), "{c}");
         }
         for (country, slug) in [
             ("Andorra", "andorra"),
@@ -931,8 +1127,8 @@ mod tests {
                 "{country}"
             );
         }
-        assert_eq!(provider_for("Canada"), None);
         assert_eq!(provider_for("Australia"), None);
+        assert_eq!(provider_for("Japan"), None);
     }
 
     fn fixture_now() -> i64 {
@@ -1137,6 +1333,84 @@ mod tests {
         let alerts = parse_nws(json);
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].headline, "Frost Advisory");
+    }
+
+    fn eccc_first_point(value: &serde_json::Value) -> (f64, f64) {
+        let ring = value["features"][0]["geometry"]["coordinates"][0]
+            .as_array()
+            .expect("first polygon ring");
+        let mut latitude = 0.0;
+        let mut longitude = 0.0;
+        for point in ring {
+            longitude += point[0].as_f64().unwrap();
+            latitude += point[1].as_f64().unwrap();
+        }
+        let count = ring.len() as f64;
+        (latitude / count, longitude / count)
+    }
+
+    #[test]
+    fn parse_eccc_fixture_matches_first_polygon() {
+        let json = include_str!("../fixtures/eccc_alerts.json");
+        let value: serde_json::Value = serde_json::from_str(json).unwrap();
+        let (latitude, longitude) = eccc_first_point(&value);
+        let first_end = value["features"][0]["properties"]["expiration_datetime"]
+            .as_str()
+            .and_then(parse_iso)
+            .expect("first feature expiry");
+        let alerts = parse_eccc(json, latitude, longitude, first_end - 1);
+        let alert = alerts
+            .iter()
+            .find(|a| a.event == "Special weather statement")
+            .expect("the vertex average should be inside the first polygon");
+        assert!(alert.id.starts_with("eccc:SPS"));
+        assert_eq!(alert.severity, "minor");
+        let props = &value["features"][0]["properties"];
+        assert_eq!(
+            alert.headline,
+            props["feature_name_en"].as_str().unwrap_or_default().trim()
+        );
+        assert_eq!(
+            alert.description,
+            props["alert_text_en"].as_str().unwrap_or_default()
+        );
+        assert_eq!(alert.ends, Some(first_end));
+        assert_eq!(alert.sender, "Environment and Climate Change Canada");
+        assert_eq!(alert.source, "Environment and Climate Change Canada");
+
+        let far = parse_eccc(json, 0.0, 0.0, first_end - 1);
+        assert!(far.is_empty());
+    }
+
+    #[test]
+    fn parse_eccc_fixture_drops_expired() {
+        let json = include_str!("../fixtures/eccc_alerts.json");
+        let value: serde_json::Value = serde_json::from_str(json).unwrap();
+        let (latitude, longitude) = eccc_first_point(&value);
+        let now = value["features"]
+            .as_array()
+            .expect("fixture features")
+            .iter()
+            .filter_map(|f| f["properties"]["expiration_datetime"].as_str())
+            .filter_map(parse_iso)
+            .max()
+            .expect("fixture expiries");
+        assert!(parse_eccc(json, latitude, longitude, now + 1).is_empty());
+    }
+
+    #[test]
+    fn parse_eccc_handles_multipolygon_and_dedupes() {
+        let json = r#"{"features":[
+            {"geometry":{"type":"MultiPolygon","coordinates":[[[[-1.0,0.0],[1.0,0.0],[1.0,2.0],[-1.0,2.0],[-1.0,0.0]]]]},
+             "properties":{"alert_code":"W","alert_name_en":"wind warning","alert_type":"warning","risk_colour_en":"red","feature_name_en":"Test area","alert_text_en":"Text","expiration_datetime":"2030-01-01T00:00:00Z"}},
+            {"geometry":{"type":"Polygon","coordinates":[[[-1.0,0.0],[1.0,0.0],[1.0,2.0],[-1.0,2.0],[-1.0,0.0]]]},
+             "properties":{"alert_code":"W","alert_name_en":"wind warning","alert_type":"warning","feature_name_en":"Test area","alert_text_en":"Text","expiration_datetime":"2030-01-01T00:00:00Z"}}
+        ]}"#;
+        let alerts = parse_eccc(json, 1.0, 0.5, 0);
+        assert_eq!(alerts.len(), 1);
+        assert_eq!(alerts[0].event, "Wind warning");
+        assert_eq!(alerts[0].severity, "extreme");
+        assert_eq!(alerts[0].description, "Text");
     }
 
     #[test]

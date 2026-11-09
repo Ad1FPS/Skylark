@@ -69,7 +69,7 @@ export function loadAlerts(loc: Location, force?: boolean): Promise<Alert[]> {
   const prevAlerts = prev?.alerts ?? [];
 
   const p = getAlerts(loc)
-    .then((alerts) => {
+    .then(({ alerts }) => {
       const changed = signature(alerts) !== signature(prevAlerts);
       cache.set(key, { alerts, at: Date.now() });
       if (changed) notifyAll(loc);

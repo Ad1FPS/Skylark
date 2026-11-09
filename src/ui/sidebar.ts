@@ -64,6 +64,7 @@ function appendAbout(box: HTMLElement): void {
   add("Radar by ", externalLink("https://librewxr.net/", "LibreWXR"), ", ", externalLink(CC_BY, "CC BY 4.0"), "; Italian radar: Radar-DPC (Dipartimento della Protezione Civile)");
   add("Map data \u00A9 ", externalLink("https://www.openstreetmap.org/copyright", "OpenStreetMap contributors"));
   add("US alerts: ", externalLink("https://www.weather.gov/", "National Weather Service"));
+  add("Canadian alerts: ", externalLink("https://weather.gc.ca/", "Environment and Climate Change Canada"));
   add("German alerts: Deutscher Wetterdienst via ", externalLink("https://brightsky.dev/", "Bright Sky"));
   add("European alerts: ", externalLink("https://meteoalarm.org", "MeteoAlarm (EUMETNET)"));
   add(
@@ -459,11 +460,15 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
     const alertLabel = document.createElement("div");
     alertLabel.className = "side-setting-label";
     alertLabel.textContent = "Alert notifications";
-    alertLabel.title = "Show a system notification when a new official weather warning (moderate or worse) is issued for your current location. Available in the US, Germany and most of Europe.";
+    alertLabel.title = "Show a system notification when a new official weather warning (moderate or worse) is issued for your current location. Available in the US, Canada, Germany and most of Europe.";
     settingsBox.append(alertLabel, segmented([
       { label: "Off", value: "off", active: s.alertNotifications === "off" },
       { label: "On", value: "on", active: s.alertNotifications === "on" },
     ], (v) => update({ ...state.settings, alertNotifications: v as Settings["alertNotifications"] })));
+    const alertCoverage = document.createElement("div");
+    alertCoverage.className = "side-setting-label";
+    alertCoverage.textContent = "Official alerts are available for the US, Canada, Germany and 38 other European countries.";
+    settingsBox.appendChild(alertCoverage);
     if (autostart !== null) {
       const label = document.createElement("div");
       label.className = "side-setting-label";
