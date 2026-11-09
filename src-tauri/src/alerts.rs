@@ -5,13 +5,19 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::commands::Http;
+use crate::regions;
 use crate::weather::Location;
 
 const NWS_URL: &str = "https://api.weather.gov/alerts/active";
-const NWS_USER_AGENT: &str = "(Skylark weather app, https://github.com/Ad1FPS/Skylark)";
 const BRIGHTSKY_URL: &str = "https://api.brightsky.dev/alerts";
+const METEOALARM_URL: &str = "https://feeds.meteoalarm.org/api/v1/warnings";
+pub(crate) const APP_USER_AGENT: &str =
+    "(Skylark weather app, https://github.com/Ad1FPS/Skylark)";
 const CACHE_TTL_SECS: i64 = 300;
+const METEOALARM_CACHE_TTL_SECS: i64 = 600;
 const DWD_SENDER: &str = "Deutscher Wetterdienst";
+const METEOALARM_SENDER: &str = "MeteoAlarm (EUMETNET)";
+const METEOALARM_SOURCE: &str = "Meteoalarm";
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -29,12 +35,18 @@ pub struct Alert {
 }
 
 #[derive(Default)]
-pub struct AlertCache(Mutex<std::collections::HashMap<String, (i64, Vec<Alert>)>>);
+pub struct AlertCache {
+    /// Parsed alerts per location, cheap to serve for a few minutes.
+    alerts: Mutex<std::collections::HashMap<String, (i64, Vec<Alert>)>>,
+    /// Raw Meteoalarm response per country slug, shared by every city in that country.
+    meteo: Mutex<std::collections::HashMap<String, (i64, String)>>,
+}
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Provider {
     Nws,
     Dwd,
+    Meteoalarm(&'static str),
 }
 
 fn now_secs() -> i64 {
@@ -45,28 +57,67 @@ fn now_secs() -> i64 {
 }
 
 pub fn provider_for(country: &str) -> Option<Provider> {
-    let c = country.trim();
-    if ["United States", "United States of America", "USA", "US"]
-        .iter()
-        .any(|s| s.eq_ignore_ascii_case(c))
-    {
-        Some(Provider::Nws)
-    } else if ["Germany", "Deutschland", "DE"]
-        .iter()
-        .any(|s| s.eq_ignore_ascii_case(c))
-    {
-        Some(Provider::Dwd)
-    } else {
-        None
-    }
+    let c = country.trim().to_lowercase();
+    let slug = match c.as_str() {
+        "united states" | "united states of america" | "usa" | "us" => return Some(Provider::Nws),
+        "germany" | "deutschland" | "de" => return Some(Provider::Dwd),
+        "andorra" => "andorra",
+        "austria" => "austria",
+        "belgium" => "belgium",
+        "bosnia and herzegovina" | "bosnia" | "bosnia & herzegovina" => {
+            "bosnia-and-herzegovina"
+        }
+        "bulgaria" => "bulgaria",
+        "croatia" => "croatia",
+        "cyprus" => "cyprus",
+        "czechia" | "czech republic" | "czech" => "czechia",
+        "denmark" => "denmark",
+        "estonia" => "estonia",
+        "finland" => "finland",
+        "france" => "france",
+        "greece" => "greece",
+        "hungary" => "hungary",
+        "iceland" => "iceland",
+        "ireland" => "ireland",
+        "israel" => "israel",
+        "italy" => "italy",
+        "latvia" => "latvia",
+        "lithuania" => "lithuania",
+        "luxembourg" => "luxembourg",
+        "malta" => "malta",
+        "moldova" | "republic of moldova" => "moldova",
+        "montenegro" => "montenegro",
+        "netherlands" | "the netherlands" | "holland" => "netherlands",
+        "north macedonia" | "republic of north macedonia" | "macedonia" => {
+            "republic-of-north-macedonia"
+        }
+        "norway" => "norway",
+        "poland" => "poland",
+        "portugal" => "portugal",
+        "romania" => "romania",
+        "serbia" => "serbia",
+        "slovakia" => "slovakia",
+        "slovenia" => "slovenia",
+        "spain" => "spain",
+        "sweden" => "sweden",
+        "switzerland" => "switzerland",
+        "ukraine" => "ukraine",
+        "united kingdom" | "uk" | "great britain" | "britain" => "united-kingdom",
+        _ => return None,
+    };
+    Some(Provider::Meteoalarm(slug))
 }
 
 #[tauri::command]
 pub async fn get_alerts(
+    app: tauri::AppHandle,
     http: State<'_, Http>,
     cache: State<'_, AlertCache>,
     location: Location,
 ) -> Result<Vec<Alert>, String> {
+    if let Ok(dir) = crate::commands::data_dir(&app) {
+        regions::set_data_dir(dir);
+    }
     alerts_for(&http.0, &cache, &location).await
 }
 
@@ -83,7 +134,7 @@ pub async fn alerts_for(
     let key = format!("{:.2},{:.2}", location.latitude, location.longitude);
     let now = now_secs();
 
-    let cached = cache.0.lock().ok().and_then(|map| map.get(&key).cloned());
+    let cached = cache.alerts.lock().ok().and_then(|map| map.get(&key).cloned());
     if let Some((fetched_at, alerts)) = &cached
         && now - fetched_at < CACHE_TTL_SECS
     {
@@ -93,6 +144,7 @@ pub async fn alerts_for(
     let fetched = match provider {
         Provider::Nws => fetch_nws(http, location.latitude, location.longitude).await,
         Provider::Dwd => fetch_dwd(http, location.latitude, location.longitude).await,
+        Provider::Meteoalarm(slug) => fetch_meteoalarm(http, cache, slug, location, now).await,
     };
 
     let alerts = match fetched {
@@ -105,7 +157,7 @@ pub async fn alerts_for(
         }
     };
 
-    if let Ok(mut map) = cache.0.lock() {
+    if let Ok(mut map) = cache.alerts.lock() {
         map.insert(key, (now, alerts.clone()));
     }
 
@@ -120,7 +172,7 @@ async fn fetch_nws(
     let url = format!("{NWS_URL}?point={latitude:.4},{longitude:.4}");
     let res = http
         .get(url)
-        .header("User-Agent", NWS_USER_AGENT)
+        .header("User-Agent", APP_USER_AGENT)
         .header("Accept", "application/geo+json")
         .send()
         .await
@@ -144,6 +196,61 @@ async fn fetch_dwd(
     }
     let text = res.text().await.map_err(|e| e.to_string())?;
     Ok(finalize(parse_dwd(&text)))
+}
+
+async fn fetch_meteo_raw(http: &reqwest::Client, slug: &str) -> Result<String, String> {
+    let url = format!("{METEOALARM_URL}/feeds-{slug}");
+    let res = http
+        .get(url)
+        .header("User-Agent", APP_USER_AGENT)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    if !res.status().is_success() {
+        return Err(format!("meteoalarm request failed: {}", res.status()));
+    }
+    res.text().await.map_err(|e| e.to_string())
+}
+
+async fn fetch_meteoalarm(
+    http: &reqwest::Client,
+    cache: &AlertCache,
+    slug: &str,
+    location: &Location,
+    now: i64,
+) -> Result<Vec<Alert>, String> {
+    let cached = cache
+        .meteo
+        .lock()
+        .ok()
+        .and_then(|map| map.get(slug).cloned());
+
+    // One raw response per country feeds every saved city in it.
+    let raw = match cached {
+        Some((fetched_at, raw)) if now - fetched_at < METEOALARM_CACHE_TTL_SECS => raw,
+        stale => match fetch_meteo_raw(http, slug).await {
+            Ok(raw) => {
+                if let Ok(mut map) = cache.meteo.lock() {
+                    map.insert(slug.to_string(), (now, raw.clone()));
+                }
+                raw
+            }
+            Err(e) => match stale {
+                Some((_, raw)) => raw,
+                None => return Err(e),
+            },
+        },
+    };
+
+    let names = regions::region_names(http, location).await;
+    Ok(finalize(parse_meteoalarm(
+        &raw,
+        location.latitude,
+        location.longitude,
+        &names,
+        now,
+    )))
 }
 
 /// Alerts already announced for a location, kept so each one raises a notification only once.
@@ -409,6 +516,270 @@ pub fn parse_dwd(json: &str) -> Vec<Alert> {
     out
 }
 
+#[derive(Deserialize)]
+struct MeteoalarmResponse {
+    #[serde(default)]
+    warnings: Vec<MeteoWarning>,
+}
+
+#[derive(Deserialize)]
+struct MeteoWarning {
+    alert: Option<MeteoAlert>,
+}
+
+#[derive(Deserialize)]
+struct MeteoAlert {
+    identifier: Option<String>,
+    #[serde(rename = "msgType")]
+    message_type: Option<String>,
+    status: Option<String>,
+    #[serde(default)]
+    info: Vec<MeteoInfo>,
+}
+
+#[derive(Deserialize)]
+struct MeteoInfo {
+    language: Option<String>,
+    event: Option<String>,
+    severity: Option<String>,
+    onset: Option<String>,
+    effective: Option<String>,
+    expires: Option<String>,
+    headline: Option<String>,
+    description: Option<String>,
+    instruction: Option<String>,
+    #[serde(rename = "senderName")]
+    sender_name: Option<String>,
+    #[serde(default)]
+    area: Vec<MeteoArea>,
+}
+
+#[derive(Deserialize)]
+struct MeteoArea {
+    #[serde(rename = "areaDesc")]
+    area_desc: Option<String>,
+    polygon: Option<Vec<String>>,
+}
+
+/// Alerts from a Meteoalarm country feed that apply to a point or its region names.
+/// `now` is passed in so the fixture tests can pin the clock.
+pub fn parse_meteoalarm(
+    json: &str,
+    latitude: f64,
+    longitude: f64,
+    region_names: &[String],
+    now: i64,
+) -> Vec<Alert> {
+    let Ok(response) = serde_json::from_str::<MeteoalarmResponse>(json) else {
+        return vec![];
+    };
+    let mut out = Vec::new();
+    for warning in response.warnings {
+        let Some(alert) = warning.alert else { continue };
+        if let Some(status) = &alert.status
+            && !status.eq_ignore_ascii_case("Actual")
+        {
+            continue;
+        }
+        if let Some(message_type) = &alert.message_type
+            && message_type.eq_ignore_ascii_case("Cancel")
+        {
+            continue;
+        }
+        let Some(info) = english_info(&alert.info) else {
+            continue;
+        };
+
+        let raw_event = info.event.as_deref().unwrap_or_default().trim();
+        if info
+            .severity
+            .as_deref()
+            .is_some_and(|severity| severity.eq_ignore_ascii_case("minor"))
+        {
+            continue;
+        }
+        if raw_event.to_lowercase().starts_with("green") {
+            continue;
+        }
+        let expires = info.expires.as_deref().and_then(parse_iso);
+        if expires.is_some_and(|expires| expires <= now) {
+            continue;
+        }
+        if !matches_area(info, latitude, longitude, region_names) {
+            continue;
+        }
+        let Some(identifier) = alert
+            .identifier
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        else {
+            continue;
+        };
+
+        let event = capitalize_first(raw_event);
+        out.push(Alert {
+            id: format!("meteoalarm:{identifier}"),
+            event,
+            severity: normalize_severity(info.severity.as_deref()),
+            headline: first_non_empty(&[info.headline.as_deref(), info.event.as_deref()]),
+            description: first_non_empty(&[info.description.as_deref()]),
+            instruction: clean_instruction(info.instruction.as_deref()),
+            onset: info
+                .onset
+                .as_deref()
+                .and_then(parse_iso)
+                .or_else(|| info.effective.as_deref().and_then(parse_iso)),
+            ends: expires,
+            sender: first_non_empty(&[info.sender_name.as_deref(), Some(METEOALARM_SENDER)]),
+            source: METEOALARM_SOURCE.to_string(),
+        });
+    }
+    out
+}
+
+fn english_info(info: &[MeteoInfo]) -> Option<&MeteoInfo> {
+    info.iter()
+        .find(|entry| {
+            entry
+                .language
+                .as_deref()
+                .is_some_and(|language| language.to_ascii_lowercase().starts_with("en"))
+        })
+        .or_else(|| info.first())
+}
+
+/// Polygons win when a warning has them; otherwise the area names have to match.
+fn matches_area(info: &MeteoInfo, latitude: f64, longitude: f64, region_names: &[String]) -> bool {
+    let rings: Vec<Vec<(f64, f64)>> = info
+        .area
+        .iter()
+        .flat_map(|area| area.polygon.as_deref().unwrap_or(&[]))
+        .filter_map(|polygon| parse_polygon(polygon.as_str()))
+        .collect();
+    if !rings.is_empty() {
+        return rings
+            .iter()
+            .any(|ring| point_in_polygon(latitude, longitude, ring));
+    }
+
+    info.area.iter().any(|area| {
+        area.area_desc.as_deref().is_some_and(|area_desc| {
+            region_names
+                .iter()
+                .any(|region| names_match(area_desc, region))
+        })
+    })
+}
+
+/// One polygon entry is a space-separated list of `lat,lon` pairs.
+fn parse_polygon(raw: &str) -> Option<Vec<(f64, f64)>> {
+    let points: Vec<(f64, f64)> = raw
+        .split_whitespace()
+        .filter_map(|pair| {
+            let (lat, lon) = pair.split_once(',')?;
+            Some((lat.trim().parse().ok()?, lon.trim().parse().ok()?))
+        })
+        .collect();
+    (points.len() >= 3).then_some(points)
+}
+
+/// Ray casting on a ring of `(latitude, longitude)` points.
+fn point_in_polygon(latitude: f64, longitude: f64, ring: &[(f64, f64)]) -> bool {
+    if ring.len() < 3 {
+        return false;
+    }
+    let mut inside = false;
+    let mut j = ring.len() - 1;
+    for (i, &(yi, xi)) in ring.iter().enumerate() {
+        let (yj, xj) = ring[j];
+        if (yi > latitude) != (yj > latitude)
+            && longitude < (xj - xi) * (latitude - yi) / (yj - yi) + xi
+        {
+            inside = !inside;
+        }
+        j = i;
+    }
+    inside
+}
+
+/// Lower-case, strip accents and punctuation, collapse whitespace.
+fn normalize_name(name: &str) -> String {
+    let mut out = String::with_capacity(name.len());
+    let mut pending_space = false;
+    for c in name.chars() {
+        for lower in c.to_lowercase() {
+            let folded = fold_char(lower);
+            if folded.is_empty() {
+                if lower.is_alphanumeric() {
+                    if pending_space && !out.is_empty() {
+                        out.push(' ');
+                    }
+                    out.push(lower);
+                    pending_space = false;
+                } else {
+                    pending_space = true;
+                }
+                continue;
+            }
+            for c in folded.chars() {
+                if pending_space && !out.is_empty() {
+                    out.push(' ');
+                }
+                out.push(c);
+                pending_space = false;
+            }
+        }
+    }
+    out
+}
+
+fn fold_char(c: char) -> &'static str {
+    match c {
+        'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' | 'ă' | 'ą' => "a",
+        'ç' | 'ć' | 'č' | 'ĉ' | 'ċ' => "c",
+        'ď' | 'đ' | 'ð' => "d",
+        'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ĕ' | 'ė' | 'ę' | 'ě' => "e",
+        'ğ' | 'ĝ' | 'ġ' | 'ģ' => "g",
+        'ì' | 'í' | 'î' | 'ï' | 'ĩ' | 'ī' | 'į' | 'ı' => "i",
+        'ł' | 'ĺ' | 'ľ' | 'ļ' => "l",
+        'ñ' | 'ń' | 'ň' | 'ņ' => "n",
+        'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ō' | 'ő' | 'ŏ' => "o",
+        'ø' | 'œ' => "oe",
+        'æ' => "ae",
+        'ř' | 'ŕ' | 'ŗ' => "r",
+        'ś' | 'š' | 'ş' | 'ŝ' | 'ș' => "s",
+        'ß' => "ss",
+        'ť' | 'ţ' | 'ț' => "t",
+        'þ' => "th",
+        'ù' | 'ú' | 'û' | 'ü' | 'ū' | 'ŭ' | 'ů' | 'ű' | 'ų' => "u",
+        'ý' | 'ÿ' => "y",
+        'ž' | 'ź' | 'ż' => "z",
+        _ => "",
+    }
+}
+
+fn contains_words(haystack: &str, needle: &str) -> bool {
+    let haystack: Vec<&str> = haystack.split_whitespace().collect();
+    let needle: Vec<&str> = needle.split_whitespace().collect();
+    !needle.is_empty()
+        && needle.len() <= haystack.len()
+        && haystack
+            .windows(needle.len())
+            .any(|window| window == needle.as_slice())
+}
+
+fn names_match(area_desc: &str, region: &str) -> bool {
+    let area_desc = normalize_name(area_desc);
+    let region = normalize_name(region);
+    if area_desc.is_empty() || region.is_empty() {
+        return false;
+    }
+    area_desc == region
+        || contains_words(&area_desc, &region)
+        || contains_words(&region, &area_desc)
+}
+
 /// RFC 3339 timestamp to unix seconds.
 pub fn parse_iso(s: &str) -> Option<i64> {
     let bytes = s.as_bytes();
@@ -486,7 +857,8 @@ fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        Alert, Provider, parse_dwd, parse_iso, parse_nws, provider_for, sort_alerts,
+        Alert, Provider, names_match, parse_dwd, parse_iso, parse_meteoalarm, parse_nws,
+        point_in_polygon, provider_for, sort_alerts,
     };
 
     #[test]
@@ -509,7 +881,236 @@ mod tests {
         for c in ["Germany", "deutschland", " DE "] {
             assert_eq!(provider_for(c), Some(Provider::Dwd), "{c}");
         }
-        assert_eq!(provider_for("France"), None);
+        for (country, slug) in [
+            ("Andorra", "andorra"),
+            ("Austria", "austria"),
+            ("Belgium", "belgium"),
+            ("Bosnia and Herzegovina", "bosnia-and-herzegovina"),
+            ("Bulgaria", "bulgaria"),
+            ("Croatia", "croatia"),
+            ("Cyprus", "cyprus"),
+            ("Czechia", "czechia"),
+            ("Czech Republic", "czechia"),
+            ("Denmark", "denmark"),
+            ("Estonia", "estonia"),
+            ("Finland", "finland"),
+            ("France", "france"),
+            ("Greece", "greece"),
+            ("Hungary", "hungary"),
+            ("Iceland", "iceland"),
+            ("Ireland", "ireland"),
+            ("Israel", "israel"),
+            ("Italy", "italy"),
+            ("Latvia", "latvia"),
+            ("Lithuania", "lithuania"),
+            ("Luxembourg", "luxembourg"),
+            ("Malta", "malta"),
+            ("Moldova", "moldova"),
+            ("Montenegro", "montenegro"),
+            ("Netherlands", "netherlands"),
+            ("The Netherlands", "netherlands"),
+            ("North Macedonia", "republic-of-north-macedonia"),
+            ("Republic of North Macedonia", "republic-of-north-macedonia"),
+            ("Norway", "norway"),
+            ("Poland", "poland"),
+            ("Portugal", "portugal"),
+            ("Romania", "romania"),
+            ("Serbia", "serbia"),
+            ("Slovakia", "slovakia"),
+            ("Slovenia", "slovenia"),
+            ("Spain", "spain"),
+            ("Sweden", "sweden"),
+            ("Switzerland", "switzerland"),
+            ("Ukraine", "ukraine"),
+            ("United Kingdom", "united-kingdom"),
+            ("UK", "united-kingdom"),
+        ] {
+            assert_eq!(
+                provider_for(country),
+                Some(Provider::Meteoalarm(slug)),
+                "{country}"
+            );
+        }
+        assert_eq!(provider_for("Canada"), None);
+        assert_eq!(provider_for("Australia"), None);
+    }
+
+    fn fixture_now() -> i64 {
+        parse_iso("2026-11-04T00:00:00Z").unwrap()
+    }
+
+    #[test]
+    fn parse_meteoalarm_matches_italian_region_names() {
+        // The trimmed Italy fixture only contains Green/Minor warnings, so this small
+        // sample covers the ordinary name-matching path with Italian region names.
+        let json = r#"{"warnings":[{"alert":{
+            "identifier":"it-toscana",
+            "msgType":"Alert",
+            "status":"Actual",
+            "info":[
+                {
+                    "language":"it-IT",
+                    "event":"Allerta vento",
+                    "severity":"Moderate",
+                    "expires":"2026-11-06T23:59:00+01:00",
+                    "area":[{"areaDesc":"Toscana"}]
+                },
+                {
+                    "language":"en-GB",
+                    "event":"Wind warning",
+                    "headline":"Wind warning for Toscana",
+                    "severity":"Moderate",
+                    "expires":"2026-11-06T23:59:00+01:00",
+                    "senderName":"Italian Air Force National Meteorological Service",
+                    "area":[{"areaDesc":"Toscana"}]
+                }
+            ]
+        }}]}"#;
+        let now = fixture_now();
+        let matched = parse_meteoalarm(
+            json,
+            43.0,
+            11.0,
+            &["Toscana".to_string()],
+            now,
+        );
+        assert_eq!(matched.len(), 1);
+        assert_eq!(matched[0].id, "meteoalarm:it-toscana");
+        assert_eq!(matched[0].event, "Wind warning");
+        assert_eq!(matched[0].headline, "Wind warning for Toscana");
+        assert_eq!(matched[0].severity, "moderate");
+        assert_eq!(matched[0].source, "Meteoalarm");
+        assert_eq!(
+            matched[0].sender,
+            "Italian Air Force National Meteorological Service"
+        );
+
+        let other = parse_meteoalarm(
+            json,
+            43.0,
+            11.0,
+            &["Lombardia".to_string()],
+            now,
+        );
+        assert!(other.is_empty());
+    }
+
+    #[test]
+    fn parse_meteoalarm_italy_fixture_is_all_green() {
+        // The trimmed fixture happens to contain only Green/Minor warnings, so all are dropped.
+        let json = include_str!("../fixtures/meteoalarm_italy.json");
+        let alerts = parse_meteoalarm(
+            json,
+            42.0,
+            12.0,
+            &["Toscana".to_string(), "Sardegna".to_string()],
+            fixture_now(),
+        );
+        assert!(alerts.is_empty());
+    }
+
+    #[test]
+    fn parse_meteoalarm_norway_fixture_matches_polygon() {
+        let json = include_str!("../fixtures/meteoalarm_norway.json");
+        let inside = parse_meteoalarm(json, 63.9, 9.2, &[], fixture_now());
+        let alert = inside
+            .iter()
+            .find(|a| a.id == "meteoalarm:2.49.0.1.578.0.20261104031829.025")
+            .expect("point should be inside the Froeya - Halten polygon");
+        assert_eq!(alert.event, "Gale");
+        assert_eq!(alert.severity, "moderate");
+        assert_eq!(alert.source, "Meteoalarm");
+        assert_eq!(alert.sender, "MET Norway");
+
+        let far = parse_meteoalarm(json, 40.0, -3.0, &[], fixture_now());
+        assert!(far.is_empty());
+    }
+
+    #[test]
+    fn parse_meteoalarm_drops_expired_norway_warning() {
+        let json = include_str!("../fixtures/meteoalarm_norway.json");
+        // The Froeya - Halten warning ends at 20:00Z.
+        let now = parse_iso("2026-11-04T21:00:00Z").unwrap();
+        let alerts = parse_meteoalarm(json, 63.9, 9.2, &[], now);
+        assert!(alerts.is_empty(), "{alerts:?}");
+    }
+
+    #[test]
+    fn parse_meteoalarm_spain_fixture_matches_zone_name() {
+        let json = include_str!("../fixtures/meteoalarm_spain.json");
+        let alerts = parse_meteoalarm(
+            json,
+            39.5,
+            -0.4,
+            &["Litoral sur de Valencia".to_string()],
+            fixture_now(),
+        );
+        assert_eq!(alerts.len(), 1);
+        assert_eq!(alerts[0].event, "Moderate rain warning");
+        assert_eq!(alerts[0].severity, "moderate");
+        assert_eq!(alerts[0].sender, "AEMET. State Meteorological Agency");
+        assert_eq!(alerts[0].source, "Meteoalarm");
+
+        let other = parse_meteoalarm(
+            json,
+            39.5,
+            -0.4,
+            &["Lombardia".to_string()],
+            fixture_now(),
+        );
+        assert!(other.is_empty());
+    }
+
+    #[test]
+    fn parse_meteoalarm_austria_fixture_is_empty() {
+        let json = include_str!("../fixtures/meteoalarm_austria.json");
+        assert!(parse_meteoalarm(json, 48.2, 16.4, &["Wien".to_string()], fixture_now()).is_empty());
+    }
+
+    #[test]
+    fn parse_meteoalarm_drops_green_minor_and_non_actual() {
+        let json = r#"{"warnings":[
+            {"alert":{"identifier":"green","msgType":"Alert","status":"Actual","info":[
+                {"language":"en","event":"Green Wind Warning","severity":"Moderate","expires":"2026-11-06T00:00:00Z","area":[{"areaDesc":"Toscana"}]}
+            ]}},
+            {"alert":{"identifier":"minor","msgType":"Alert","status":"Actual","info":[
+                {"language":"en","event":"Wind warning","severity":"Minor","expires":"2026-11-06T00:00:00Z","area":[{"areaDesc":"Toscana"}]}
+            ]}},
+            {"alert":{"identifier":"exercise","msgType":"Alert","status":"Exercise","info":[
+                {"language":"en","event":"Wind warning","severity":"Moderate","expires":"2026-11-06T00:00:00Z","area":[{"areaDesc":"Toscana"}]}
+            ]}},
+            {"alert":{"identifier":"cancel","msgType":"Cancel","status":"Actual","info":[
+                {"language":"en","event":"Wind warning","severity":"Moderate","expires":"2026-11-06T00:00:00Z","area":[{"areaDesc":"Toscana"}]}
+            ]}},
+            {"alert":{"identifier":"expired","msgType":"Alert","status":"Actual","info":[
+                {"language":"en","event":"Wind warning","severity":"Moderate","expires":"2026-11-03T00:00:00Z","area":[{"areaDesc":"Toscana"}]}
+            ]}},
+            {"alert":{"identifier":"ok","msgType":"Alert","status":"Actual","info":[
+                {"language":"en","event":"Wind warning","severity":"Severe","expires":"2026-11-06T00:00:00Z","area":[{"areaDesc":"Toscana"}]}
+            ]}}
+        ]}"#;
+        let alerts = parse_meteoalarm(json, 43.0, 11.0, &["Toscana".to_string()], fixture_now());
+        assert_eq!(alerts.len(), 1);
+        assert_eq!(alerts[0].id, "meteoalarm:ok");
+        assert_eq!(alerts[0].severity, "severe");
+    }
+
+    #[test]
+    fn point_in_polygon_cases() {
+        let square = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)];
+        assert!(point_in_polygon(0.5, 0.5, &square));
+        assert!(!point_in_polygon(2.0, 2.0, &square));
+        assert!(!point_in_polygon(0.5, 1.5, &square));
+        assert!(!point_in_polygon(0.5, 0.5, &[]));
+    }
+
+    #[test]
+    fn names_match_handles_accents_and_whole_words() {
+        assert!(names_match("Litoral sur de Valencia", "Valencia"));
+        assert!(names_match("Côte d'Azur", "Cote d Azur"));
+        assert!(names_match("Frøya - Halten", "Froeya"));
+        assert!(names_match("Toscana", "toscana"));
+        assert!(!names_match("Toscana", "Lombardia"));
     }
 
     #[test]

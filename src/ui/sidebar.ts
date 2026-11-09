@@ -65,6 +65,13 @@ function appendAbout(box: HTMLElement): void {
   add("Map data \u00A9 ", externalLink("https://www.openstreetmap.org/copyright", "OpenStreetMap contributors"));
   add("US alerts: ", externalLink("https://www.weather.gov/", "National Weather Service"));
   add("German alerts: Deutscher Wetterdienst via ", externalLink("https://brightsky.dev/", "Bright Sky"));
+  add("European alerts: ", externalLink("https://meteoalarm.org", "MeteoAlarm (EUMETNET)"));
+  add(
+    "Region lookup: ",
+    externalLink("https://nominatim.openstreetmap.org/", "Nominatim"),
+    " \u00A9 ",
+    externalLink("https://www.openstreetmap.org/copyright", "OpenStreetMap contributors"),
+  );
   add("IP location: ", externalLink("https://ipwho.is/", "ipwho.is"));
   box.appendChild(sources);
 }
@@ -452,7 +459,7 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
     const alertLabel = document.createElement("div");
     alertLabel.className = "side-setting-label";
     alertLabel.textContent = "Alert notifications";
-    alertLabel.title = "Show a system notification when a new official weather warning (moderate or worse) is issued for your current location. Available in the US and Germany.";
+    alertLabel.title = "Show a system notification when a new official weather warning (moderate or worse) is issued for your current location. Available in the US, Germany and most of Europe.";
     settingsBox.append(alertLabel, segmented([
       { label: "Off", value: "off", active: s.alertNotifications === "off" },
       { label: "On", value: "on", active: s.alertNotifications === "on" },

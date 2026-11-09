@@ -1,6 +1,7 @@
 mod alerts;
 mod climate;
 mod commands;
+mod regions;
 mod store;
 mod tiles;
 mod tray;

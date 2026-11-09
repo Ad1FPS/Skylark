@@ -25,7 +25,7 @@ All tiles:
 - Current conditions, hourly strip (switch between conditions, chance of rain and wind), 10-day forecast, 15-minute rain nowcast
 - Precipitation radar with a 60 minute nowcast, pan, zoom and play, and an expanded view that gives the map half the window
 - Tiles for air quality, UV, sun, wind, moon phase, averages (today's high versus the 10-year normal), precipitation, feels like, humidity, visibility and pressure; each opens a popover next to it, and the 10-day rows and hourly card open a per-day Conditions popover
-- Official weather alerts for the US (National Weather Service) and Germany (DWD): a coloured pill under the city name, a detail popover with the full text and instructions, a warning mark on the city in the sidebar, and optional system notifications for new moderate-or-worse warnings. The source is picked automatically from the location's country
+- Official weather alerts for the US (National Weather Service), Germany (DWD) and the rest of Europe (MeteoAlarm): a coloured pill under the city name, a detail popover with the full text and instructions, a warning mark on the city in the sidebar, and optional system notifications for new moderate-or-worse warnings. The source is picked automatically from the location's country; European region names come from a Nominatim reverse lookup
 - Wind map: animated streamlines over a dark map for the next 24 hours, coloured by speed
 - Animated sky that follows the time of day: sun with a faint halo, moon, stars, clouds, rain (with droplets running down the tiles), snow, fog, lightning; optional 60 fps mode
 - Weather icons as line drawings or in colour
@@ -52,7 +52,7 @@ Rust checks: `cd src-tauri && cargo test && cargo clippy -- -D warnings`. Fronte
 
 - Weather, nowcast, air quality and geocoding: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0; the free API is for non-commercial use)
 - Radar: [LibreWXR](https://librewxr.net/) (CC BY 4.0; national radar composites plus a 60 minute nowcast; Italian radar © Radar-DPC)
-- Alerts: [National Weather Service](https://www.weather.gov/documentation/services-web-api) (US) and the German Weather Service (DWD) via [Bright Sky](https://brightsky.dev/); alerts are shown as published, in an emergency follow your local authorities
+- Alerts: [National Weather Service](https://www.weather.gov/documentation/services-web-api) (US), the German Weather Service (DWD) via [Bright Sky](https://brightsky.dev/), and [MeteoAlarm](https://meteoalarm.org/) (EUMETNET) for the rest of Europe; European region names are resolved with [Nominatim](https://nominatim.openstreetmap.org/) © OpenStreetMap contributors. Alerts are shown as published, in an emergency follow your local authorities
 - Map tiles: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors
 - IP location: [ipwho.is](https://ipwho.is/)
 

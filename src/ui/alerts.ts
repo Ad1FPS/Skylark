@@ -4,6 +4,7 @@ import { icon } from "../icons";
 import { loadAlerts, onAlertsChange, peekAlerts, sameKey, severityColor } from "../alerts/store";
 import type { DetailContent } from "./detail-common";
 import { section, sentence, statGrid } from "./detail-common";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 const WEEKDAY = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
 
@@ -17,6 +18,11 @@ const SEVERITY_LABEL: Record<Alert["severity"], string> = {
 const SOURCE_LABEL: Record<string, string> = {
   NWS: "US National Weather Service",
   DWD: "German Weather Service (DWD)",
+  Meteoalarm: "MeteoAlarm (EUMETNET)",
+};
+
+const SOURCE_URL: Record<string, string> = {
+  Meteoalarm: "https://meteoalarm.org",
 };
 
 function shifted(unix: number, offset: number): Date {
@@ -66,6 +72,37 @@ function endsLabel(ends: number | null, offset: number, clock: Settings["clock"]
   const now = Date.now() / 1000;
   if (sameDay(ends, now, offset)) return time;
   return `${WEEKDAY.format(d)} ${time}`;
+}
+
+function sourceStat(alert: Alert): HTMLElement {
+  const stat = document.createElement("div");
+  stat.className = "dt-stat";
+
+  const label = document.createElement("span");
+  label.className = "dt-stat-label";
+  label.textContent = "Source";
+
+  const value = document.createElement("span");
+  value.className = "dt-stat-value";
+  const text = SOURCE_LABEL[alert.source] ?? alert.source;
+  const href = SOURCE_URL[alert.source];
+  if (!href) {
+    value.textContent = text;
+  } else {
+    const link = document.createElement("a");
+    link.href = href;
+    link.textContent = text;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      void openUrl(href).catch(() => {});
+    });
+    value.appendChild(link);
+  }
+
+  stat.append(label, value);
+  return stat;
 }
 
 function pill(b: WeatherBundle, alert: Alert, index: number, s: Settings): HTMLElement {
@@ -166,14 +203,13 @@ export function alertView(b: WeatherBundle, s: Settings, index = 0): DetailConte
   chip.textContent = `${SEVERITY_LABEL[alert.severity] ?? "Minor"} alert`;
   body.appendChild(chip);
 
-  body.appendChild(
-    statGrid([
-      { label: "From", value: leadLabel(alert.onset, b.utcOffsetSeconds, s.clock) },
-      { label: "Until", value: endsLabel(alert.ends, b.utcOffsetSeconds, s.clock) },
-      { label: "Issued by", value: alert.sender },
-      { label: "Source", value: SOURCE_LABEL[alert.source] ?? alert.source },
-    ]),
-  );
+  const stats = statGrid([
+    { label: "From", value: leadLabel(alert.onset, b.utcOffsetSeconds, s.clock) },
+    { label: "Until", value: endsLabel(alert.ends, b.utcOffsetSeconds, s.clock) },
+    { label: "Issued by", value: alert.sender },
+  ]);
+  stats.appendChild(sourceStat(alert));
+  body.appendChild(stats);
 
   if (alert.headline) {
     body.appendChild(sentence(alert.headline));
