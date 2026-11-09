@@ -80,6 +80,10 @@ Skylark checks GitHub Releases for a new version once a day and shows an update 
 - [Claude](https://claude.com/claude-code) (Anthropic): planning, architecture, code review and much of the implementation
 - [DeepSeek](https://www.deepseek.com/): bulk code generation, from specs written and reviewed by Claude
 
+## Code signing and privacy
+
+See [CODE_SIGNING.md](CODE_SIGNING.md) for the code signing policy and what data Skylark sends where (no telemetry).
+
 ## License
 
 [MIT](LICENSE)
