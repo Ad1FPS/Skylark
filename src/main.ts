@@ -159,7 +159,7 @@ function renderMain(main: HTMLElement, b: WeatherBundle): void {
   const daily = renderDaily(b, state.settings);
   daily.classList.add("span-2", "row-2");
   grid.appendChild(daily);
-  const radar = renderRadar(b, state.settings);
+  const radar = renderRadar(b);
   const nowcast = renderNowcast(b, state.settings);
   if (nowcast) radar.appendChild(nowcast);
   grid.appendChild(radar);

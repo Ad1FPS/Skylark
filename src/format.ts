@@ -2,14 +2,23 @@ import type { Settings } from "./types";
 
 const KEY = "weather.settings";
 
-export const DEFAULT_SETTINGS: Settings = { temp: "c", wind: "kmh", clock: "24", fps: "30", radar: "auto", icons: "color", keepAlive: "off", alertNotifications: "off" };
+export const DEFAULT_SETTINGS: Settings = { temp: "c", wind: "kmh", clock: "24", fps: "30", icons: "color", keepAlive: "off", alertNotifications: "off" };
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
     const parsed = JSON.parse(raw) as Partial<Settings>;
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    // Read known keys only, so saved settings from older versions are ignored safely.
+    return {
+      temp: parsed.temp ?? DEFAULT_SETTINGS.temp,
+      wind: parsed.wind ?? DEFAULT_SETTINGS.wind,
+      clock: parsed.clock ?? DEFAULT_SETTINGS.clock,
+      fps: parsed.fps ?? DEFAULT_SETTINGS.fps,
+      icons: parsed.icons ?? DEFAULT_SETTINGS.icons,
+      keepAlive: parsed.keepAlive ?? DEFAULT_SETTINGS.keepAlive,
+      alertNotifications: parsed.alertNotifications ?? DEFAULT_SETTINGS.alertNotifications,
+    };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

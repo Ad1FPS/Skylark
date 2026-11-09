@@ -1,8 +1,7 @@
-import type { Settings, WeatherBundle } from "../types";
-import { esc, saveSettings } from "../format";
-import { state, set } from "../state";
+import type { WeatherBundle } from "../types";
+import { esc } from "../format";
 import { icon } from "../icons";
-import { loadRadar, PROVIDERS, type RadarSource } from "../radar/providers";
+import { loadRadar, type RadarSource } from "../radar/providers";
 
 const TILE = 256;
 const DEFAULT_Z = 6;
@@ -84,84 +83,18 @@ function setExpanded(card: HTMLElement, on: boolean): void {
   btn?.setAttribute("aria-pressed", String(on));
 }
 
-export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
+export function renderRadar(b: WeatherBundle): HTMLElement {
   const card = document.createElement("section");
   card.className = "card radar span-2";
 
   const title = document.createElement("h2");
   title.className = "card-title";
   title.innerHTML = `${icon("drop", 13)}<span>${esc("RADAR")}</span>`;
-  const choices: [Settings["radar"], string][] = [
-    ["auto", "Auto"],
-    ...PROVIDERS.map((p): [Settings["radar"], string] => [p.id, p.name]),
-  ];
-  const picker = document.createElement("button");
-  picker.type = "button";
-  picker.className = "radar-source";
-  picker.setAttribute("aria-label", "Radar source");
-  picker.setAttribute("aria-haspopup", "menu");
-  let activeName: string | null = null;
-  const pickerLabel = (): string => {
-    const base = choices.find(([v]) => v === settings.radar)?.[1] ?? "Auto";
-    return settings.radar === "auto" && activeName ? `${base} \u00B7 ${activeName}` : base;
-  };
-  const paintPicker = (): void => {
-    picker.innerHTML = `<span>${esc(pickerLabel())}</span><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  };
-  paintPicker();
-
-  let menu: HTMLElement | null = null;
-  const closeMenu = (): void => {
-    menu?.remove();
-    menu = null;
-    picker.setAttribute("aria-expanded", "false");
-  };
-  const openMenu = (): void => {
-    closeMenu();
-    const m = document.createElement("div");
-    m.className = "ctx-menu radar-menu";
-    m.setAttribute("role", "menu");
-    for (const [value, label] of choices) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.setAttribute("role", "menuitemradio");
-      const on = value === settings.radar;
-      btn.setAttribute("aria-checked", String(on));
-      btn.innerHTML = `<span class="radar-menu-check">${on ? "\u2713" : ""}</span>${esc(label)}`;
-      btn.addEventListener("click", () => {
-        closeMenu();
-        if (on) return;
-        const next = { ...state.settings, radar: value };
-        set({ settings: next });
-        saveSettings(next);
-      });
-      m.appendChild(btn);
-    }
-    document.body.appendChild(m);
-    const r = picker.getBoundingClientRect();
-    m.style.left = `${Math.max(8, Math.min(r.right - m.offsetWidth, window.innerWidth - m.offsetWidth - 8))}px`;
-    m.style.top = `${r.bottom + 4}px`;
-    menu = m;
-    picker.setAttribute("aria-expanded", "true");
-  };
-  picker.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (menu) closeMenu();
-    else openMenu();
-  });
-  const onPointerDown = (e: PointerEvent): void => {
-    if (menu && !menu.contains(e.target as Node) && e.target !== picker) closeMenu();
-  };
   const onKey = (e: KeyboardEvent): void => {
-    if (e.key !== "Escape") return;
-    if (menu) closeMenu();
-    else if (card.classList.contains("expanded")) setExpanded(card, false);
+    if (e.key === "Escape" && card.classList.contains("expanded")) setExpanded(card, false);
   };
-  document.addEventListener("pointerdown", onPointerDown);
   document.addEventListener("keydown", onKey);
-  window.addEventListener("blur", closeMenu);
   {
-    title.appendChild(picker);
     const expand = document.createElement("button");
     expand.type = "button";
     expand.className = "radar-expand";
@@ -214,12 +147,6 @@ export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
       playBtn,
       slider,
       timeLabel,
-      pick: settings.radar,
-      onProvider: (name) => {
-        // In Auto mode, show which provider actually answered.
-        activeName = name;
-        paintPicker();
-      },
       isDisposed: () => disposed,
     });
   };
@@ -241,10 +168,7 @@ export function renderRadar(b: WeatherBundle, settings: Settings): HTMLElement {
   const cleanup = () => {
     disposed = true;
     io.disconnect();
-    closeMenu();
-    document.removeEventListener("pointerdown", onPointerDown);
     document.removeEventListener("keydown", onKey);
-    window.removeEventListener("blur", closeMenu);
     ownerOf(map)?.dispose();
   };
 
@@ -274,8 +198,6 @@ interface StartArgs {
   b: WeatherBundle;
   card: HTMLElement;
   map: HTMLElement;
-  pick: Settings["radar"];
-  onProvider: (name: string | null) => void;
   playBtn: HTMLButtonElement;
   slider: HTMLInputElement;
   timeLabel: HTMLElement;
@@ -285,17 +207,15 @@ interface StartArgs {
 /* ---------- radar engine ---------- */
 
 async function startRadar(args: StartArgs): Promise<void> {
-  const { b, card, map, pick, onProvider, isDisposed } = args;
-  const loaded = await loadRadar(b.location.latitude, b.location.longitude, pick);
+  const { b, card, map, isDisposed } = args;
+  const source = await loadRadar(b.location.latitude);
   if (isDisposed()) return;
-  if (!loaded) {
-    onProvider(null);
+  if (!source) {
     card.classList.add("radar-off");
-    const who = pick === "auto" ? "Radar" : (PROVIDERS.find((p) => p.id === pick)?.name ?? "Radar");
     const msg = document.createElement("div");
     msg.className = "radar-loading radar-unavailable";
     const text = document.createElement("span");
-    text.textContent = pick === "auto" ? "Radar is unavailable right now." : `${who} is not responding.`;
+    text.textContent = "Radar is unavailable right now.";
     const retry = document.createElement("button");
     retry.type = "button";
     retry.className = "radar-retry";
@@ -309,9 +229,8 @@ async function startRadar(args: StartArgs): Promise<void> {
     map.appendChild(msg);
     return;
   }
-  onProvider(loaded.provider.name);
 
-  const engine = createEngine({ ...args, source: loaded.source });
+  const engine = createEngine({ ...args, source });
   engine.start();
   // Expose to renderRadar for pause-on-offscreen via a property on the card.
   (map as unknown as { _radarOwner: RadarOwner })._radarOwner = engine;

@@ -129,8 +129,6 @@ export interface Settings {
   clock: "12" | "24";
   /** Background animation frame rate cap. */
   fps: "30" | "60";
-  /** Radar source: "auto" tries each provider in order. */
-  radar: "auto" | "librewxr" | "rainviewer";
   /** Condition icons: line drawings or coloured artwork. */
   icons: "mono" | "color";
   /** "on": closing the window hides it (instant reopen, about 110 MB stays in use) instead of freeing the webview. */

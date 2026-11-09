@@ -402,6 +402,53 @@
   color: var(--text-3);
 }
 
+.about-title {
+  margin-top: 10px;
+}
+
+.about-version {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.about-repo {
+  margin-top: -2px;
+  font-size: 11px;
+}
+
+.about-repo a,
+.about-sources a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.about-repo a:hover,
+.about-sources a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.about-sources-title {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.about-sources {
+  margin: 0;
+  padding: 0 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--text-3);
+}
+
+.about-sources li::marker {
+  color: var(--text-3);
+}
+
 /* City rows show their own sky; the active row gets a ring instead of a lighter fill. */
 .city.has-sky,
 .city.has-sky:hover,

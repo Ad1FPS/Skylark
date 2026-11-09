@@ -9,6 +9,65 @@ import { loadAlerts, onAlertsChange, peekAlerts, severityColor, worstSeverity } 
 import { addMiniSky } from "../fx/minisky";
 import type { Scene } from "../fx/types";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
+
+const CC_BY = "https://creativecommons.org/licenses/by/4.0/";
+const appVersion = getVersion().catch(() => "");
+
+function externalLink(href: string, label: string): HTMLAnchorElement {
+  const link = document.createElement("a");
+  link.href = href;
+  link.textContent = label;
+  link.target = "_blank";
+  link.rel = "noreferrer";
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    void openUrl(href).catch(() => {});
+  });
+  return link;
+}
+
+function appendAbout(box: HTMLElement): void {
+  const title = document.createElement("div");
+  title.className = "side-section-title about-title";
+  title.textContent = "ABOUT";
+  box.appendChild(title);
+
+  const version = document.createElement("div");
+  version.className = "about-version";
+  version.textContent = "Skylark";
+  void appVersion.then((v) => {
+    if (v) version.textContent = `Skylark ${v}`;
+  });
+  box.appendChild(version);
+
+  const repo = document.createElement("div");
+  repo.className = "about-repo";
+  repo.appendChild(externalLink("https://github.com/Ad1FPS/Skylark", "github.com/Ad1FPS/Skylark"));
+  box.appendChild(repo);
+
+  const sourcesTitle = document.createElement("div");
+  sourcesTitle.className = "about-sources-title";
+  sourcesTitle.textContent = "Data sources";
+  box.appendChild(sourcesTitle);
+
+  const sources = document.createElement("ul");
+  sources.className = "about-sources";
+  const add = (...parts: (string | Node)[]): void => {
+    const line = document.createElement("li");
+    for (const part of parts) line.append(part);
+    sources.appendChild(line);
+  };
+
+  add("Weather data by ", externalLink("https://open-meteo.com/", "Open-Meteo.com"), ", licence ", externalLink(CC_BY, "CC BY 4.0"));
+  add("Radar by ", externalLink("https://librewxr.net/", "LibreWXR"), ", ", externalLink(CC_BY, "CC BY 4.0"), "; Italian radar: Radar-DPC (Dipartimento della Protezione Civile)");
+  add("Map data \u00A9 ", externalLink("https://www.openstreetmap.org/copyright", "OpenStreetMap contributors"));
+  add("US alerts: ", externalLink("https://www.weather.gov/", "National Weather Service"));
+  add("German alerts: Deutscher Wetterdienst via ", externalLink("https://brightsky.dev/", "Bright Sky"));
+  add("IP location: ", externalLink("https://ipwho.is/", "ipwho.is"));
+  box.appendChild(sources);
+}
 
 const cache = new Map<string, WeatherBundle>();
 const fetching = new Set<string>();
@@ -407,6 +466,7 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
         { label: "On", value: "on", active: autostart },
       ], (v) => void setAutostart(v === "on")));
     }
+    appendAbout(settingsBox);
   };
 
   let autostart: boolean | null = null;
