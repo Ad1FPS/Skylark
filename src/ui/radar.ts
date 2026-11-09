@@ -2,6 +2,7 @@ import type { WeatherBundle } from "../types";
 import { esc } from "../format";
 import { icon } from "../icons";
 import { loadRadar, type RadarSource } from "../radar/providers";
+import { osmTileUrl } from "../map/tiles";
 
 const TILE = 256;
 const DEFAULT_Z = 6;
@@ -43,12 +44,6 @@ function worldYToLat(y: number, scale: number): number {
 
 function clampLat(lat: number): number {
   return Math.max(-MAX_LAT, Math.min(MAX_LAT, lat));
-}
-
-/* ---------- tile urls ---------- */
-
-function baseTileUrl(z: number, x: number, y: number): string {
-  return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
 }
 
 /* ---------- time label ---------- */
@@ -369,7 +364,7 @@ function createEngine(a: EngineArgs): Engine {
       const px = k.x * TILE + ox;
       const py = k.y * TILE + oy;
       place(img, px, py);
-      const url = baseTileUrl(k.z, wx, k.y);
+      const url = osmTileUrl(k.z, wx, k.y);
       if (img.getAttribute("src") !== url) img.src = url;
     });
 

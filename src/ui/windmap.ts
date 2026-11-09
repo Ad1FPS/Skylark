@@ -1,6 +1,7 @@
 import type { Settings, WeatherBundle } from "../types";
 import { esc } from "../format";
 import { icon } from "../icons";
+import { osmTileUrl } from "../map/tiles";
 import { getWindGrid, type WindGrid } from "../api";
 import { sampleGrid, speedColor } from "../wind/field";
 
@@ -303,7 +304,7 @@ export function renderWindMap(b: WeatherBundle, s: Settings): HTMLElement {
             img.decoding = "async";
             img.alt = "";
             const wx = ((x % maxTile) + maxTile) % maxTile;
-            img.src = `https://tile.openstreetmap.org/${ZOOM}/${wx}/${y}.png`;
+            img.src = osmTileUrl(ZOOM, wx, y);
             baseLayer.appendChild(img);
             baseTiles.set(key, img);
           }

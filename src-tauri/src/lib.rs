@@ -2,6 +2,7 @@ mod alerts;
 mod climate;
 mod commands;
 mod store;
+mod tiles;
 mod tray;
 mod weather;
 mod wind;
@@ -34,6 +35,13 @@ pub fn run() {
         ))
         .manage(Http::new())
         .manage(alerts::AlertCache::default())
+        .register_asynchronous_uri_scheme_protocol("osmtile", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            let path = request.uri().path().to_string();
+            tauri::async_runtime::spawn(async move {
+                responder.respond(tiles::serve(&app, &path).await);
+            });
+        })
         .invoke_handler(tauri::generate_handler![
             commands::search_city,
             commands::locate_ip,
@@ -64,6 +72,12 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            let cache_dir = app.path().app_cache_dir().ok();
+            std::thread::spawn(move || {
+                if let Some(dir) = cache_dir {
+                    tiles::prune_cache(&dir);
+                }
+            });
             tray::setup(app.handle())?;
             tray::start_background_refresh(app.handle());
             // The window is created here, not by the config, so a login launch can stay in the tray.
