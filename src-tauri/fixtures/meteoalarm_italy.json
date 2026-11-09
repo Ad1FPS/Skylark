@@ -1,0 +1,812 @@
+{
+ "warnings": [
+  {
+   "alert": {
+    "identifier": "2.49.0.0.380.3.IT.261104102014.002",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Sardegna",
+        "geocode": [
+         {
+          "value": "IT019",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Private",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Green Thunderstorm Warning",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Green Thunderstorm Warning for Italy - Sardegna",
+      "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+      "language": "en-GB",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "3; Thunderstorm",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Italian Air Force National Meteorological Service",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/en/live/region/IT?s=sardegna"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Sardegna",
+        "geocode": [
+         {
+          "value": "IT019",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Privato",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Verde Temporali Allerta",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Allerta Temporali Verde per l'Italia - Sardegna",
+      "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+      "language": "it-IT",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "3; Thunderstorm",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/it/live/region/IT?s=sardegna"
+     }
+    ],
+    "msgType": "Update",
+    "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.261103101715.027,2026-11-03T10:17:15+01:00",
+    "scope": "Public",
+    "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+    "sent": "2026-11-04T10:20:14+01:00",
+    "status": "Actual"
+   },
+   "uuid": "c6b197d6-579d-4857-b2af-295d6731c44c"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.380.3.IT.261104102014.001",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Liguria",
+        "geocode": [
+         {
+          "value": "IT007",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Private",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Green Wind Warning",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Green Wind Warning for Italy - Liguria",
+      "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+      "language": "en-GB",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Italian Air Force National Meteorological Service",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/en/live/region/IT?s=liguria"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Liguria",
+        "geocode": [
+         {
+          "value": "IT007",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Privato",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Verde Vento Allerta",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Allerta Vento Verde per l'Italia - Liguria",
+      "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+      "language": "it-IT",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/it/live/region/IT?s=liguria"
+     }
+    ],
+    "msgType": "Update",
+    "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.261103101715.026,2026-11-03T10:17:15+01:00",
+    "scope": "Public",
+    "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+    "sent": "2026-11-04T10:20:14+01:00",
+    "status": "Actual"
+   },
+   "uuid": "56258a93-f74f-4728-b549-293f49eea9c8"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.380.3.IT.261104102014.003",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Sardegna",
+        "geocode": [
+         {
+          "value": "IT019",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Private",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Green Wind Warning",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Green Wind Warning for Italy - Sardegna",
+      "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+      "language": "en-GB",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Italian Air Force National Meteorological Service",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/en/live/region/IT?s=sardegna"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Sardegna",
+        "geocode": [
+         {
+          "value": "IT019",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Privato",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Verde Vento Allerta",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Allerta Vento Verde per l'Italia - Sardegna",
+      "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+      "language": "it-IT",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/it/live/region/IT?s=sardegna"
+     }
+    ],
+    "msgType": "Update",
+    "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.261103101715.028,2026-11-03T10:17:15+01:00",
+    "scope": "Public",
+    "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+    "sent": "2026-11-04T10:20:14+01:00",
+    "status": "Actual"
+   },
+   "uuid": "324d638b-26d5-485a-813d-338574285f52"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.380.3.IT.261104102014.004",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Emilia e Romagna",
+        "geocode": [
+         {
+          "value": "IT008",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Private",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Green Wind Warning",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Green Wind Warning for Italy - Emilia e Romagna",
+      "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+      "language": "en-GB",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Italian Air Force National Meteorological Service",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/en/live/region/IT?s=emilia"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Emilia e Romagna",
+        "geocode": [
+         {
+          "value": "IT008",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Privato",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Verde Vento Allerta",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Allerta Vento Verde per l'Italia - Emilia e Romagna",
+      "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+      "language": "it-IT",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/it/live/region/IT?s=emilia"
+     }
+    ],
+    "msgType": "Update",
+    "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.261102112537.071,2026-11-02T11:25:37+01:00",
+    "scope": "Public",
+    "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+    "sent": "2026-11-04T10:20:14+01:00",
+    "status": "Actual"
+   },
+   "uuid": "d427eba8-bcff-4234-a7e3-a4132b567a8c"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.380.3.IT.261104102014.005",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Marche",
+        "geocode": [
+         {
+          "value": "IT011",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Private",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Green Wind Warning",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Green Wind Warning for Italy - Marche",
+      "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+      "language": "en-GB",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Italian Air Force National Meteorological Service",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/en/live/region/IT?s=marche"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Marche",
+        "geocode": [
+         {
+          "value": "IT011",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Privato",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Verde Vento Allerta",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Allerta Vento Verde per l'Italia - Marche",
+      "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+      "language": "it-IT",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/it/live/region/IT?s=marche"
+     }
+    ],
+    "msgType": "Update",
+    "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.261102112537.072,2026-11-02T11:25:37+01:00",
+    "scope": "Public",
+    "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+    "sent": "2026-11-04T10:20:14+01:00",
+    "status": "Actual"
+   },
+   "uuid": "5c9c5e88-1410-4087-99ce-ecbe117f34c3"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.380.3.IT.261104102014.006",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Liguria",
+        "geocode": [
+         {
+          "value": "IT007",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Private",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Green Wind Warning",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Green Wind Warning for Italy - Liguria",
+      "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+      "language": "en-GB",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Italian Air Force National Meteorological Service",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/en/live/region/IT?s=liguria"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Liguria",
+        "geocode": [
+         {
+          "value": "IT007",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Privato",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Verde Vento Allerta",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Allerta Vento Verde per l'Italia - Liguria",
+      "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+      "language": "it-IT",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/it/live/region/IT?s=liguria"
+     }
+    ],
+    "msgType": "Update",
+    "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.261102112537.099,2026-11-02T11:25:37+01:00",
+    "scope": "Public",
+    "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+    "sent": "2026-11-04T10:20:14+01:00",
+    "status": "Actual"
+   },
+   "uuid": "88c2768d-a3cf-47b7-9bed-4f403a9af520"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.380.3.IT.261104102014.008",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Sardegna",
+        "geocode": [
+         {
+          "value": "IT019",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Private",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Green Wind Warning",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Green Wind Warning for Italy - Sardegna",
+      "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+      "language": "en-GB",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Italian Air Force National Meteorological Service",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/en/live/region/IT?s=sardegna"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Sardegna",
+        "geocode": [
+         {
+          "value": "IT019",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Privato",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Verde Vento Allerta",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Allerta Vento Verde per l'Italia - Sardegna",
+      "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+      "language": "it-IT",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/it/live/region/IT?s=sardegna"
+     }
+    ],
+    "msgType": "Update",
+    "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.261102112537.114,2026-11-02T11:25:38+01:00",
+    "scope": "Public",
+    "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+    "sent": "2026-11-04T10:20:14+01:00",
+    "status": "Actual"
+   },
+   "uuid": "acd8ba98-d42c-4933-b01a-5db3d13bf0b4"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.380.3.IT.261104102014.007",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Sardegna",
+        "geocode": [
+         {
+          "value": "IT019",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Private",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No Special Awareness Required\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Green Thunderstorm Warning",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Green Thunderstorm Warning for Italy - Sardegna",
+      "instruction": "The weather is not expected to cause significant impacts but there may be some minor, localized issues",
+      "language": "en-GB",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "3; Thunderstorm",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Italian Air Force National Meteorological Service",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/en/live/region/IT?s=sardegna"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Sardegna",
+        "geocode": [
+         {
+          "value": "IT019",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "audience": "Privato",
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nessun Avviso\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "effective": "2026-11-04T10:20:00+01:00",
+      "event": "Verde Temporali Allerta",
+      "expires": "2026-11-06T23:59:00+01:00",
+      "headline": "Allerta Temporali Verde per l'Italia - Sardegna",
+      "instruction": "Non ci si aspetta che il tempo possa causare impatti significativi, ma potrebbero verificarsi alcuni locali, minori problemi.",
+      "language": "it-IT",
+      "onset": "2026-11-04T10:20:00+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "3; Thunderstorm",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "https://meteoalarm.org/it/live/region/IT?s=sardegna"
+     }
+    ],
+    "msgType": "Update",
+    "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.261102112537.113,2026-11-02T11:25:38+01:00",
+    "scope": "Public",
+    "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+    "sent": "2026-11-04T10:20:14+01:00",
+    "status": "Actual"
+   },
+   "uuid": "a9cd75d1-9bf1-47a9-aec3-f04f3236d18c"
+  }
+ ]
+}

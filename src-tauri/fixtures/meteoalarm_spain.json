@@ -1,0 +1,601 @@
+{
+ "warnings": [
+  {
+   "alert": {
+    "identifier": "2.49.0.0.724.0.ES.261104074609.774604PRP2041178369",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Litoral sur de Valencia",
+        "geocode": [
+         {
+          "value": "ES249",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "description": "Precipitación acumulada en 12 horas: 60 mm. Los chubascos pueden ir acompañados de tormenta.",
+      "effective": "2026-11-04T08:43:04+01:00",
+      "event": "Aviso de lluvias de nivel amarillo",
+      "expires": "2026-11-04T11:59:59+01:00",
+      "headline": "Aviso de lluvias de nivel amarillo. Litoral sur de Valencia",
+      "instruction": "Esté atento. Manténgase informado de la predicción meteorológica más actualizada. Se pueden producir daños moderados a personas y bienes, especialmente a aquellos vulnerables o en zonas expuestas al fenómeno.",
+      "language": "es-ES",
+      "onset": "2026-11-04T08:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "10; Rain",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. Agencia Estatal de Meteorología",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.aemet.es/es/eltiempo/prediccion/avisos"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Litoral sur de Valencia",
+        "geocode": [
+         {
+          "value": "ES249",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "description": "Twelve-hours accumulated precipitation: 60 mm. Los chubascos pueden ir acompañados de tormenta.",
+      "effective": "2026-11-04T08:43:04+01:00",
+      "event": "Moderate rain warning",
+      "expires": "2026-11-04T11:59:59+01:00",
+      "headline": "Moderate rain warning. Litoral sur de Valencia",
+      "instruction": "Be aware, keep up to date with the latest weather forecast. Moderate damages to people and properties may occur, especially to those vulnerable or in exposed areas.",
+      "language": "en-GB",
+      "onset": "2026-11-04T08:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "10; Rain",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. State Meteorological Agency",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.aemet.es/en/eltiempo/prediccion/avisos"
+     }
+    ],
+    "msgType": "Update",
+    "references": "http://www.aemet.es,2.49.0.0.724.0.ES.261104040409.774604PRP2041165049,2026-11-04T04:04:09+00:00",
+    "scope": "Public",
+    "sender": "http://www.aemet.es",
+    "sent": "2026-11-04T07:46:09+00:00",
+    "status": "Actual"
+   },
+   "uuid": "0636ea46-a781-4a16-88dc-59262f349c7d"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.724.0.ES.261104075409.795201TOTO042078849",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Melilla",
+        "geocode": [
+         {
+          "value": "ES251",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "effective": "2026-11-04T08:50:46+01:00",
+      "event": "Aviso de tormentas de nivel amarillo",
+      "expires": "2026-11-04T20:59:59+01:00",
+      "headline": "Aviso de tormentas de nivel amarillo. Melilla",
+      "instruction": "Esté atento. Manténgase informado de la predicción meteorológica más actualizada. Se pueden producir daños moderados a personas y bienes, especialmente a aquellos vulnerables o en zonas expuestas al fenómeno.",
+      "language": "es-ES",
+      "onset": "2026-11-04T15:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "3; Thunderstorm",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. Agencia Estatal de Meteorología",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.aemet.es/es/eltiempo/prediccion/avisos"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Melilla",
+        "geocode": [
+         {
+          "value": "ES251",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "effective": "2026-11-04T08:50:46+01:00",
+      "event": "Moderate thunderstorm warning",
+      "expires": "2026-11-04T20:59:59+01:00",
+      "headline": "Moderate thunderstorm warning. Melilla",
+      "instruction": "Be aware, keep up to date with the latest weather forecast. Moderate damages to people and properties may occur, especially to those vulnerable or in exposed areas.",
+      "language": "en-GB",
+      "onset": "2026-11-04T15:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "3; Thunderstorm",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. State Meteorological Agency",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.aemet.es/en/eltiempo/prediccion/avisos"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "http://www.aemet.es",
+    "sent": "2026-11-04T07:54:09+00:00",
+    "status": "Actual"
+   },
+   "uuid": "3930e949-d5f9-4e3f-bcbf-93d9334e3c17"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.724.0.ES.261104075409.795201PRP1042078849",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Melilla",
+        "geocode": [
+         {
+          "value": "ES251",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "description": "Precipitación acumulada en una hora: 15 mm.",
+      "effective": "2026-11-04T08:50:46+01:00",
+      "event": "Aviso de lluvias de nivel amarillo",
+      "expires": "2026-11-04T20:59:59+01:00",
+      "headline": "Aviso de lluvias de nivel amarillo. Melilla",
+      "instruction": "Esté atento. Manténgase informado de la predicción meteorológica más actualizada. Se pueden producir daños moderados a personas y bienes, especialmente a aquellos vulnerables o en zonas expuestas al fenómeno.",
+      "language": "es-ES",
+      "onset": "2026-11-04T15:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "10; Rain",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. Agencia Estatal de Meteorología",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.aemet.es/es/eltiempo/prediccion/avisos"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Melilla",
+        "geocode": [
+         {
+          "value": "ES251",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "description": "One-hour accumulated precipitation: 15 mm.",
+      "effective": "2026-11-04T08:50:46+01:00",
+      "event": "Moderate rain warning",
+      "expires": "2026-11-04T20:59:59+01:00",
+      "headline": "Moderate rain warning. Melilla",
+      "instruction": "Be aware, keep up to date with the latest weather forecast. Moderate damages to people and properties may occur, especially to those vulnerable or in exposed areas.",
+      "language": "en-GB",
+      "onset": "2026-11-04T15:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "10; Rain",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. State Meteorological Agency",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.aemet.es/en/eltiempo/prediccion/avisos"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "http://www.aemet.es",
+    "sent": "2026-11-04T07:54:09+00:00",
+    "status": "Actual"
+   },
+   "uuid": "7ecf260a-11cc-4c99-a427-aba685d074b6"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.724.0.ES.261104083010.691703COVV040981010",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Costa - Ampurdán",
+        "geocode": [
+         {
+          "value": "ES890",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "effective": "2026-11-04T09:30:10+01:00",
+      "event": "Aviso de costeros de nivel verde",
+      "expires": "2026-11-04T09:30:10+01:00",
+      "headline": "Aviso de costeros de nivel verde. Costa - Ampurdán",
+      "language": "es-ES",
+      "onset": "2026-11-04T09:30:10+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "AllClear"
+      ],
+      "senderName": "AEMET. Agencia Estatal de Meteorología",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "http://www.aemet.es/es/eltiempo/prediccion/avisos"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Costa - Ampurdán",
+        "geocode": [
+         {
+          "value": "ES890",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "effective": "2026-11-04T09:30:10+01:00",
+      "event": "Minor coastalevent warning",
+      "expires": "2026-11-04T09:30:10+01:00",
+      "headline": "Minor coastalevent warning. Costa - Ampurdán",
+      "language": "en-GB",
+      "onset": "2026-11-04T09:30:10+01:00",
+      "parameter": [
+       {
+        "value": "1; green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "AllClear"
+      ],
+      "senderName": "AEMET. State Meteorological Agency",
+      "severity": "Minor",
+      "urgency": "Future",
+      "web": "http://www.aemet.es/en/eltiempo/prediccion/avisos"
+     }
+    ],
+    "msgType": "Update",
+    "references": "http://www.aemet.es,2.49.0.0.724.0.ES.261103175408.691703COCO042328448,2026-11-03T17:54:08+00:00 http://www.aemet.es,2.49.0.0.724.0.ES.261103180408.691703COCO050529048,2026-11-03T18:04:08+00:00",
+    "scope": "Public",
+    "sender": "http://www.aemet.es",
+    "sent": "2026-11-04T08:30:10+00:00",
+    "status": "Actual"
+   },
+   "uuid": "e133ec64-70a8-4c96-a996-f387b96486ef"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.724.0.ES.261104094009.712702NINI050985209",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Centro de Lugo",
+        "geocode": [
+         {
+          "value": "ES207",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "description": "Visibilidad: 200 m.",
+      "effective": "2026-11-04T10:38:23+01:00",
+      "event": "Aviso de nieblas de nivel amarillo",
+      "expires": "2026-11-05T09:59:59+01:00",
+      "headline": "Aviso de nieblas de nivel amarillo. Centro de Lugo",
+      "instruction": "Esté atento. Manténgase informado de la predicción meteorológica más actualizada. Se pueden producir daños moderados a personas y bienes, especialmente a aquellos vulnerables o en zonas expuestas al fenómeno.",
+      "language": "es-ES",
+      "onset": "2026-11-04T22:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. Agencia Estatal de Meteorología",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.aemet.es/es/eltiempo/prediccion/avisos"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Centro de Lugo",
+        "geocode": [
+         {
+          "value": "ES207",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "description": "Visibility: 200 m.",
+      "effective": "2026-11-04T10:38:23+01:00",
+      "event": "Moderate fog warning",
+      "expires": "2026-11-05T09:59:59+01:00",
+      "headline": "Moderate fog warning. Centro de Lugo",
+      "instruction": "Be aware, keep up to date with the latest weather forecast. Moderate damages to people and properties may occur, especially to those vulnerable or in exposed areas.",
+      "language": "en-GB",
+      "onset": "2026-11-04T22:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. State Meteorological Agency",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.aemet.es/en/eltiempo/prediccion/avisos"
+     }
+    ],
+    "msgType": "Update",
+    "references": "http://www.aemet.es,2.49.0.0.724.0.ES.261104075009.712702NINI042378609,2026-11-04T07:50:09+00:00 http://www.aemet.es,2.49.0.0.724.0.ES.261103180408.712702NINI050929048,2026-11-03T18:04:08+00:00",
+    "scope": "Public",
+    "sender": "http://www.aemet.es",
+    "sent": "2026-11-04T09:40:09+00:00",
+    "status": "Actual"
+   },
+   "uuid": "e24795b7-fda2-403b-af72-43fc5665a4d7"
+  },
+  {
+   "alert": {
+    "identifier": "2.49.0.0.724.0.ES.261104095008.733004PRP2050285808",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Valle del Guadalentín, Lorca y Águilas",
+        "geocode": [
+         {
+          "value": "ES224",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "description": "Precipitación acumulada en 12 horas: 60 mm.",
+      "effective": "2026-11-04T10:46:48+01:00",
+      "event": "Aviso de lluvias de nivel amarillo",
+      "expires": "2026-11-05T02:59:59+01:00",
+      "headline": "Aviso de lluvias de nivel amarillo. Valle del Guadalentín, Lorca y Águilas",
+      "instruction": "Esté atento. Manténgase informado de la predicción meteorológica más actualizada. Se pueden producir daños moderados a personas y bienes, especialmente a aquellos vulnerables o en zonas expuestas al fenómeno.",
+      "language": "es-ES",
+      "onset": "2026-11-04T16:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "10; Rain",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. Agencia Estatal de Meteorología",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.aemet.es/es/eltiempo/prediccion/avisos"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Valle del Guadalentín, Lorca y Águilas",
+        "geocode": [
+         {
+          "value": "ES224",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "AEMET",
+      "description": "Twelve-hours accumulated precipitation: 60 mm.",
+      "effective": "2026-11-04T10:46:48+01:00",
+      "event": "Moderate rain warning",
+      "expires": "2026-11-05T02:59:59+01:00",
+      "headline": "Moderate rain warning. Valle del Guadalentín, Lorca y Águilas",
+      "instruction": "Be aware, keep up to date with the latest weather forecast. Moderate damages to people and properties may occur, especially to those vulnerable or in exposed areas.",
+      "language": "en-GB",
+      "onset": "2026-11-04T16:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "10; Rain",
+        "valueName": "awareness_type"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "AEMET. State Meteorological Agency",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.aemet.es/en/eltiempo/prediccion/avisos"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "http://www.aemet.es",
+    "sent": "2026-11-04T09:50:08+00:00",
+    "status": "Actual"
+   },
+   "uuid": "3f665b64-e248-4a4a-8cc8-98efd9f8f7d5"
+  }
+ ]
+}

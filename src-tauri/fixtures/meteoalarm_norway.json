@@ -1,0 +1,1113 @@
+{
+ "warnings": [
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.1.578.0.20261104031829.025",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Frøya - Halten",
+        "ceiling": 900.0,
+        "polygon": [
+         "63.7878,8.1965 63.5922,8.5632 63.68,9.0648 63.7733,9.5882 63.879,9.8772 63.9943,10.0302 64.1827,9.4457 64.227,9.2363 64.1618,9.0593 64.0453,8.7472 63.9213,8.4228 63.7878,8.1965 63.7878,8.1965"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/kontakt-oss",
+      "description": "Natt til onsdag økning til vestlig stiv kuling 15 m/s, minkende onsdag kveld.",
+      "event": "Kuling",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-04T20:00:00+00:00",
+      "headline": "Kuling, gult nivå, Frøya - Halten, 2026-11-04T01:00:00+00:00, 2026-11-04T20:00:00+00:00",
+      "instruction": "Vurder å la båten ligge: Det kan være farlig å være ute i småbåt. Vurder å la båten ligge: Det kan være farlig å være ute i småbåt. Ved motorstopp kan man drive raskt mot land.",
+      "language": "no",
+      "onset": "2026-11-04T01:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-04T20:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Grov sjø: Hvitt skum fra bølgetopper som brekker.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Kuling",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Utfordrende situasjon",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "13.9m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Følg med",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "Meteorologisk Institutt",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     },
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Froeya - Halten",
+        "ceiling": 900.0,
+        "polygon": [
+         "63.7878,8.1965 63.5922,8.5632 63.68,9.0648 63.7733,9.5882 63.879,9.8772 63.9943,10.0302 64.1827,9.4457 64.227,9.2363 64.1618,9.0593 64.0453,8.7472 63.9213,8.4228 63.7878,8.1965 63.7878,8.1965"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/en/contact-us",
+      "description": "Early Wednesday morning increasing westerly near gale force 7, decreasing Wednesday evening.",
+      "event": "Gale",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-04T20:00:00+00:00",
+      "headline": "Gale, yellow level, Froeya - Halten, 2026-11-04T01:00:00+00:00, 2026-11-04T20:00:00+00:00",
+      "instruction": "Consider not taking the boat out: Risk of dangerous situations when in a small boat at sea. Consider not taking the boat out: Risk of dangerous situations when in a small boat at sea. If the engine stops you can float towards land.",
+      "language": "en-GB",
+      "onset": "2026-11-04T01:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-04T20:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Sea heaps up: Moderate amounts of airborne spray.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Gale",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Challenging situation",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "13.9m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Be aware",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "MET Norway",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     }
+    ],
+    "msgType": "Update",
+    "references": "meteorologi@met.no,2.49.0.1.578.0.20261103214507.048,2026-11-03T21:45:54+00:00 meteorologi@met.no,2.49.0.1.578.0.20261103103944.083,2026-11-03T10:46:26+00:00",
+    "scope": "Public",
+    "sender": "meteorologi@met.no",
+    "sent": "2026-11-04T03:19:15+00:00",
+    "status": "Actual"
+   },
+   "uuid": "44999d27-cf25-4927-8cd7-417637b01b9b"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.1.578.0.20261104031432.035",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Ona - Frøya",
+        "ceiling": 900.0,
+        "polygon": [
+         "62.9098,6.4753 62.8382,6.6072 62.9522,7.0817 63.0378,7.471 63.1437,7.7712 63.2637,7.8767 63.3897,7.8462 63.449,7.9983 63.5052,8.3647 63.5922,8.5632 63.7878,8.1958 63.6915,8.0332 63.5475,7.7928 63.5463,7.791 63.4788,7.6983 63.4192,7.6 63.2745,7.3637 63.1295,7.1298 63.0427,6.8693 62.9358,6.5523 62.9098,6.4753 62.9098,6.4753"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Observed",
+      "contact": "https://www.met.no/kontakt-oss",
+      "description": "I dag, onsdag, sørvestleg periodevis stiv kuling 15 m/s, minkende i kveld",
+      "event": "Kuling",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-04T20:00:00+00:00",
+      "headline": "Kuling, gult nivå, Ona - Frøya, 2026-11-04T03:00:00+00:00, 2026-11-04T20:00:00+00:00",
+      "instruction": "Vurder å la båten ligge: Det kan være farlig å være ute i småbåt. Vurder å la båten ligge: Det kan være farlig å være ute i småbåt. Ved motorstopp kan man drive raskt mot land.",
+      "language": "no",
+      "onset": "2026-11-04T03:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-04T20:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Grov sjø: Hvitt skum fra bølgetopper som brekker.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Kuling",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Utfordrende situasjon",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "13.9m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Følg med",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "Meteorologisk Institutt",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     },
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Ona - Froeya",
+        "ceiling": 900.0,
+        "polygon": [
+         "62.9098,6.4753 62.8382,6.6072 62.9522,7.0817 63.0378,7.471 63.1437,7.7712 63.2637,7.8767 63.3897,7.8462 63.449,7.9983 63.5052,8.3647 63.5922,8.5632 63.7878,8.1958 63.6915,8.0332 63.5475,7.7928 63.5463,7.791 63.4788,7.6983 63.4192,7.6 63.2745,7.3637 63.1295,7.1298 63.0427,6.8693 62.9358,6.5523 62.9098,6.4753 62.9098,6.4753"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Observed",
+      "contact": "https://www.met.no/en/contact-us",
+      "description": "Today,m Wednesday. southwest occasional near gale force 7, decreasing Wednesday evening.",
+      "event": "Gale",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-04T20:00:00+00:00",
+      "headline": "Gale, yellow level, Ona - Froeya, 2026-11-04T03:00:00+00:00, 2026-11-04T20:00:00+00:00",
+      "instruction": "Consider not taking the boat out: Risk of dangerous situations when in a small boat at sea. Consider not taking the boat out: Risk of dangerous situations when in a small boat at sea. If the engine stops you can float towards land.",
+      "language": "en-GB",
+      "onset": "2026-11-04T03:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-04T20:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Sea heaps up: Moderate amounts of airborne spray.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Gale",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Challenging situation",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "13.9m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Be aware",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "MET Norway",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "meteorologi@met.no",
+    "sent": "2026-11-04T03:18:13+00:00",
+    "status": "Actual"
+   },
+   "uuid": "4ad790c5-e014-4bf6-bc03-88cf405c6b17"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.1.578.0.20261104031958.096",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Halten - Rørvik",
+        "ceiling": 900.0,
+        "polygon": [
+         "64.1828,9.4457 63.9943,10.0302 64.147,10.2257 64.2737,10.3815 64.4067,10.5937 64.6077,10.9382 64.7582,11.2387 65,10.567 64.9193,10.4843 64.834,10.4182 64.7883,10.4027 64.7618,10.3462 64.629,10.0647 64.4955,9.7858 64.3615,9.5098 64.2268,9.2412 64.1828,9.4457 64.1828,9.4457"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/kontakt-oss",
+      "description": "I dag, onsdag, vestlig stiv og periodevis sterk kuling 20 m/s, minkende i kveld.",
+      "event": "Kuling",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-04T18:00:00+00:00",
+      "headline": "Kuling, gult nivå, Halten - Rørvik, 2026-11-03T23:00:00+00:00, 2026-11-04T18:00:00+00:00",
+      "instruction": "Vurder å la båten ligge: Det kan være farlig å være ute i småbåt. Vurder å la båten ligge: Det kan være farlig å være ute i småbåt. Ved motorstopp kan man drive raskt mot land.",
+      "language": "no",
+      "onset": "2026-11-03T23:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-04T18:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Grov sjø: Hvitt skum fra bølgetopper som brekker.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Kuling",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Utfordrende situasjon",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "17.2m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Følg med",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "Meteorologisk Institutt",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     },
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Halten - Roervik",
+        "ceiling": 900.0,
+        "polygon": [
+         "64.1828,9.4457 63.9943,10.0302 64.147,10.2257 64.2737,10.3815 64.4067,10.5937 64.6077,10.9382 64.7582,11.2387 65,10.567 64.9193,10.4843 64.834,10.4182 64.7883,10.4027 64.7618,10.3462 64.629,10.0647 64.4955,9.7858 64.3615,9.5098 64.2268,9.2412 64.1828,9.4457 64.1828,9.4457"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/en/contact-us",
+      "description": "Today Wednesday westerly near gale force 7 and occasional gale force 8, decreasing Wednesday evening.",
+      "event": "Gale",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-04T18:00:00+00:00",
+      "headline": "Gale, yellow level, Halten - Roervik, 2026-11-03T23:00:00+00:00, 2026-11-04T18:00:00+00:00",
+      "instruction": "Consider not taking the boat out: Risk of dangerous situations when in a small boat at sea. Consider not taking the boat out: Risk of dangerous situations when in a small boat at sea. If the engine stops you can float towards land.",
+      "language": "en-GB",
+      "onset": "2026-11-03T23:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-04T18:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Sea heaps up: Moderate amounts of airborne spray.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Gale",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Challenging situation",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "17.2m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Be aware",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "MET Norway",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     }
+    ],
+    "msgType": "Update",
+    "references": "meteorologi@met.no,2.49.0.1.578.0.20261103214604.054,2026-11-03T21:46:27+00:00 meteorologi@met.no,2.49.0.1.578.0.20261103214322.034,2026-11-03T21:44:30+00:00 meteorologi@met.no,2.49.0.1.578.0.20261103104337.022,2026-11-03T10:46:22+00:00",
+    "scope": "Public",
+    "sender": "meteorologi@met.no",
+    "sent": "2026-11-04T03:23:02+00:00",
+    "status": "Actual"
+   },
+   "uuid": "342e76fe-c59f-469a-85e4-5bc9527b0c15"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.1.578.0.20261104081649.033",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Støtt - Lødingen",
+        "ceiling": 900.0,
+        "polygon": [
+         "66.9133,13.7607 67.2505,14.6128 67.3015,13.9162 67.2,13.7 67.0485,13.3535 66.9498,13.5832 66.9133,13.7607 66.9133,13.7607",
+         "68.1667,15.2167 68.0987,14.7422 68.0307,14.894 67.7667,14.3832 67.6163,14.4208 67.4538,14.2413 67.3015,13.9162 67.2505,14.6128 67.5158,15.017 67.6167,14.8832 67.9635,15.3273 68.1832,15.9667 68.2167,16 68.305,16.225 68.5667,16.0332 68.5998,15.9498 68.5332,15.8667 68.5,15.7667 68.4498,15.6498 68.4667,15.6167 68.5,15.6832 68.5332,15.6167 68.5167,15.4332 68.4667,15.4332 68.4167,15.2667 68.3667,15.1332 68.3498,15.2667 68.3,15.1167 68.2667,15.1832 68.1667,15.2167 68.1667,15.2167"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/kontakt-oss",
+      "description": "Onsdag fortsatt sørvest til vest stiv kuling 15 m/s. Natt til torsdag minkende.",
+      "event": "Kuling",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-05T00:00:00+00:00",
+      "headline": "Kuling, gult nivå, Støtt - Lødingen, 2026-11-03T18:00:00+00:00, 2026-11-05T00:00:00+00:00",
+      "instruction": "Vurder å la båten ligge: Det kan være farlig å være ute i småbåt. Ved motorstopp kan man drive raskt mot land.",
+      "language": "no",
+      "onset": "2026-11-03T18:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-05T00:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Grov sjø: Hvitt skum fra bølgetopper som brekker. Sjøen bygger seg opp: Det er farlig å være ute i småbåt.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Kuling",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Utfordrende situasjon",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "13.9m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Følg med",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "Meteorologisk Institutt",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     },
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Stoett - Loedingen",
+        "ceiling": 900.0,
+        "polygon": [
+         "66.9133,13.7607 67.2505,14.6128 67.3015,13.9162 67.2,13.7 67.0485,13.3535 66.9498,13.5832 66.9133,13.7607 66.9133,13.7607",
+         "68.1667,15.2167 68.0987,14.7422 68.0307,14.894 67.7667,14.3832 67.6163,14.4208 67.4538,14.2413 67.3015,13.9162 67.2505,14.6128 67.5158,15.017 67.6167,14.8832 67.9635,15.3273 68.1832,15.9667 68.2167,16 68.305,16.225 68.5667,16.0332 68.5998,15.9498 68.5332,15.8667 68.5,15.7667 68.4498,15.6498 68.4667,15.6167 68.5,15.6832 68.5332,15.6167 68.5167,15.4332 68.4667,15.4332 68.4167,15.2667 68.3667,15.1332 68.3498,15.2667 68.3,15.1167 68.2667,15.1832 68.1667,15.2167 68.1667,15.2167"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/en/contact-us",
+      "description": "Wednesday still southwest to west near gale force 7. Early Thursday morning decreasing.",
+      "event": "Gale",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-05T00:00:00+00:00",
+      "headline": "Gale, yellow level, Stoett - Loedingen, 2026-11-03T18:00:00+00:00, 2026-11-05T00:00:00+00:00",
+      "instruction": "Consider not taking the boat out: Risk of dangerous situations when in a small boat at sea. If the engine stops you can float towards land.",
+      "language": "en-GB",
+      "onset": "2026-11-03T18:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-05T00:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Sea heaps up: Moderate amounts of airborne spray. Moderate waves: Risk of dangerous situations when in a small boat at sea.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Gale",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Challenging situation",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "13.9m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Be aware",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "MET Norway",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     }
+    ],
+    "msgType": "Update",
+    "references": "meteorologi@met.no,2.49.0.1.578.0.20261103074455.100,2026-11-03T07:48:37+00:00",
+    "scope": "Public",
+    "sender": "meteorologi@met.no",
+    "sent": "2026-11-04T08:36:43+00:00",
+    "status": "Actual"
+   },
+   "uuid": "0a369827-2bbd-467c-b9a5-7a14d910079e"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.1.578.0.20261103200023.045",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Rørvik - Støtt",
+        "ceiling": 900.0,
+        "polygon": [
+         "65.05,12.0332 65.9497,12.6832 65.9497,12.3167 65.983,11.8732 65.9,11.8 65.2667,11.4332 65.037,10.7222 65.0057,10.6353 64.7582,11.2387 65.05,12.0332 65.05,12.0332",
+         "65.983,11.8732 65.9497,12.3167 65.9497,12.6832 66.9133,13.7607 66.9497,13.5832 67.0485,13.3535 66.8,12.8 66.4012,12.2467 65.983,11.8732 65.983,11.8732"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/kontakt-oss",
+      "description": "Sørvestlig periodevis stiv kuling 15 m/s, minkende tidlig onsdag ettermiddag.",
+      "event": "Kuling",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-04T11:00:00+00:00",
+      "headline": "Kuling, gult nivå, Rørvik - Støtt, 2026-11-03T22:00:00+00:00, 2026-11-04T11:00:00+00:00",
+      "instruction": "Vurder å la båten ligge: Det kan være farlig å være ute i småbåt. Ved motorstopp kan man drive raskt mot land.",
+      "language": "no",
+      "onset": "2026-11-03T22:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-04T11:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Grov sjø: Hvitt skum fra bølgetopper som brekker.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Kuling",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Utfordrende situasjon",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "13.9m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Følg med",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "Meteorologisk Institutt",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     },
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Roervik - Stoett",
+        "ceiling": 900.0,
+        "polygon": [
+         "65.05,12.0332 65.9497,12.6832 65.9497,12.3167 65.983,11.8732 65.9,11.8 65.2667,11.4332 65.037,10.7222 65.0057,10.6353 64.7582,11.2387 65.05,12.0332 65.05,12.0332",
+         "65.983,11.8732 65.9497,12.3167 65.9497,12.6832 66.9133,13.7607 66.9497,13.5832 67.0485,13.3535 66.8,12.8 66.4012,12.2467 65.983,11.8732 65.983,11.8732"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/en/contact-us",
+      "description": "Southwest occasionally near gale force 7, decreasing early Wednesday afternoon.",
+      "event": "Gale",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-04T11:00:00+00:00",
+      "headline": "Gale, yellow level, Roervik - Stoett, 2026-11-03T22:00:00+00:00, 2026-11-04T11:00:00+00:00",
+      "instruction": "Consider not taking the boat out: Risk of dangerous situations when in a small boat at sea. If the engine stops you can float towards land.",
+      "language": "en-GB",
+      "onset": "2026-11-03T22:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-04T11:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Sea heaps up: Moderate amounts of airborne spray.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Gale",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Challenging situation",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "13.9m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Be aware",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "MET Norway",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     }
+    ],
+    "msgType": "Update",
+    "references": "meteorologi@met.no,2.49.0.1.578.0.20261103074907.091,2026-11-03T07:51:40+00:00",
+    "scope": "Public",
+    "sender": "meteorologi@met.no",
+    "sent": "2026-11-04T08:37:09+00:00",
+    "status": "Actual"
+   },
+   "uuid": "cc46e919-f136-4a8b-b577-4c53c300b0e6"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.1.578.0.20261103193949.074",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Skomvær - Andenes",
+        "ceiling": 900.0,
+        "polygon": [
+         "68.1667,15.2167 68.2667,15.1832 68.3,15.1167 68.3497,15.2667 68.3667,15.1332 68.3332,15.05 68.3167,14.9332 68.3332,14.8332 68.3667,14.8167 68.3832,14.6832 68.3497,14.6167 68.3667,14.55 68.4167,14.5332 68.4167,14.4332 68.4497,14.3667 68.4497,14.1832 68.4832,14.1332 68.535,13.9117 68.0297,12.9082 67.6462,12.5072 67.484,11.7717 67.4048,11.8843 67.5572,12.6037 67.9767,13.2532 68.1135,13.9092 68.1512,14.6232 68.0987,14.7422 68.1667,15.2167 68.1667,15.2167",
+         "68.3667,15.1332 68.4167,15.2667 68.4667,15.4332 68.5167,15.4332 68.5332,15.6167 68.6832,15.7332 68.7667,15.7167 68.8332,15.7667 68.9497,15.8667 69.0332,16.0497 69.2332,16.3332 69.3322,16.0627 69.0717,15.1637 68.8397,14.5487 68.535,13.9117 68.4832,14.1332 68.4497,14.1832 68.4497,14.3667 68.4167,14.4332 68.4167,14.5332 68.3667,14.55 68.3497,14.6167 68.3832,14.6832 68.3667,14.8167 68.3332,14.8332 68.3167,14.9332 68.3332,15.05 68.3667,15.1332 68.3667,15.1332"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/kontakt-oss",
+      "description": "Fra onsdag formiddag vestlig opptil sterk kuling 20 m/s, onsdag kveld dreiende til nordvestlig stiv kuling 15, minkende natt til torsdag.",
+      "event": "Kuling",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-05T07:00:00+00:00",
+      "headline": "Kuling, gult nivå, Skomvær - Andenes, 2026-11-04T09:00:00+00:00, 2026-11-05T07:00:00+00:00",
+      "instruction": "Ikke dra ut i småbåt: Det er farlig å være ute i småbåt. Ved motorstopp kan man drive raskt mot land.",
+      "language": "no",
+      "onset": "2026-11-04T09:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-05T07:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Sjøen bygger seg opp: Det er farlig å være ute i småbåt. Middels høye bølger: Bølgekammene er ved å brytes opp til sjørokk.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Kuling",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Utfordrende situasjon",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "17.2m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Følg med",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "Meteorologisk Institutt",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     },
+     {
+      "area": [
+       {
+        "altitude": 0.0,
+        "areaDesc": "Skomvaer - Andenes",
+        "ceiling": 900.0,
+        "polygon": [
+         "68.1667,15.2167 68.2667,15.1832 68.3,15.1167 68.3497,15.2667 68.3667,15.1332 68.3332,15.05 68.3167,14.9332 68.3332,14.8332 68.3667,14.8167 68.3832,14.6832 68.3497,14.6167 68.3667,14.55 68.4167,14.5332 68.4167,14.4332 68.4497,14.3667 68.4497,14.1832 68.4832,14.1332 68.535,13.9117 68.0297,12.9082 67.6462,12.5072 67.484,11.7717 67.4048,11.8843 67.5572,12.6037 67.9767,13.2532 68.1135,13.9092 68.1512,14.6232 68.0987,14.7422 68.1667,15.2167 68.1667,15.2167",
+         "68.3667,15.1332 68.4167,15.2667 68.4667,15.4332 68.5167,15.4332 68.5332,15.6167 68.6832,15.7332 68.7667,15.7167 68.8332,15.7667 68.9497,15.8667 69.0332,16.0497 69.2332,16.3332 69.3322,16.0627 69.0717,15.1637 68.8397,14.5487 68.535,13.9117 68.4832,14.1332 68.4497,14.1832 68.4497,14.3667 68.4167,14.4332 68.4167,14.5332 68.3667,14.55 68.3497,14.6167 68.3832,14.6832 68.3667,14.8167 68.3332,14.8332 68.3167,14.9332 68.3332,15.05 68.3667,15.1332 68.3667,15.1332"
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "contact": "https://www.met.no/en/contact-us",
+      "description": "From late Wednesday morning west up to gale force 8, Wednesday evening veering to northwest near gale force 7, decreasing early Thursday morning.",
+      "event": "Gale",
+      "eventCode": [
+       {
+        "value": "OET-221",
+        "valueName": "OET:v1.0"
+       },
+       {
+        "value": "gale",
+        "valueName": "eventType"
+       }
+      ],
+      "expires": "2026-11-05T07:00:00+00:00",
+      "headline": "Gale, yellow level, Skomvaer - Andenes, 2026-11-04T09:00:00+00:00, 2026-11-05T07:00:00+00:00",
+      "instruction": "Do not go out in a small boat: High risk of dangerous situations when in a small boat at sea. If the engine stops you can float towards land.",
+      "language": "en-GB",
+      "onset": "2026-11-04T09:00:00+00:00",
+      "parameter": [
+       {
+        "value": "2026-11-05T07:00:00+00:00",
+        "valueName": "eventEndingTime"
+       },
+       {
+        "value": "Moderate waves: Risk of dangerous situations when in a small boat at sea. Moderately high waves: Waves with breaking crests forming spindrift. Considerable airborne spray.",
+        "valueName": "impacts"
+       },
+       {
+        "value": "Gale",
+        "valueName": "eventAwarenessName"
+       },
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "Yellow",
+        "valueName": "riskMatrixColor"
+       },
+       {
+        "value": "Challenging situation",
+        "valueName": "awarenessSeriousness"
+       },
+       {
+        "value": "1; Wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "17.2m/s",
+        "valueName": "triggerLevel"
+       },
+       {
+        "value": "Be aware",
+        "valueName": "awarenessResponse"
+       },
+       {
+        "value": "marine",
+        "valueName": "geographicDomain"
+       }
+      ],
+      "responseType": [
+       "Monitor"
+      ],
+      "senderName": "MET Norway",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-farevarsler/vaerfenomener-som-kan-gi-farevarsel-fra-met/kuling-stormvarsel-for-kyst-og-naere-fiskebanker"
+     }
+    ],
+    "msgType": "Update",
+    "references": "meteorologi@met.no,2.49.0.1.578.0.20261103073916.009,2026-11-03T07:44:52+00:00",
+    "scope": "Public",
+    "sender": "meteorologi@met.no",
+    "sent": "2026-11-04T08:36:55+00:00",
+    "status": "Actual"
+   },
+   "uuid": "b760dafa-ba82-4429-948e-abfe4fc50228"
+  }
+ ]
+}
