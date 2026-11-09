@@ -36,6 +36,12 @@
   stroke-width: 1;
 }
 
+.titlebar-btn.settings svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.5;
+}
+
 .titlebar-btn:hover {
   background: rgba(255, 255, 255, 0.1);
 }

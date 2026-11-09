@@ -6,6 +6,7 @@ import "./styles/nowcast.css";
 import "./styles/locate.css";
 import "./styles/fx.css";
 import "./styles/titlebar.css";
+import "./styles/settings.css";
 import "./styles/detail.css";
 import "./styles/popover.css";
 import "./styles/glass.css";

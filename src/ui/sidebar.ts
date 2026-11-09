@@ -1,81 +1,13 @@
-import type { Location, Settings, WeatherBundle } from "../types";
+import type { Location, WeatherBundle } from "../types";
 import { state, set, subscribe } from "../state";
 import { searchCity, saveLocation, removeLocation, getWeather, getCached, locateIp } from "../api";
-import { esc, localClock, saveSettings, temp, tempDeg } from "../format";
+import { esc, localClock, temp, tempDeg } from "../format";
 import { describe, skyGradient } from "../theme";
 import { icon } from "../icons";
 import { sceneFor } from "../scene";
 import { loadAlerts, onAlertsChange, peekAlerts, severityColor, worstSeverity } from "../alerts/store";
 import { addMiniSky } from "../fx/minisky";
 import type { Scene } from "../fx/types";
-import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { getVersion } from "@tauri-apps/api/app";
-import { openUrl } from "@tauri-apps/plugin-opener";
-
-const CC_BY = "https://creativecommons.org/licenses/by/4.0/";
-const appVersion = getVersion().catch(() => "");
-
-function externalLink(href: string, label: string): HTMLAnchorElement {
-  const link = document.createElement("a");
-  link.href = href;
-  link.textContent = label;
-  link.target = "_blank";
-  link.rel = "noreferrer";
-  link.addEventListener("click", (e) => {
-    e.preventDefault();
-    void openUrl(href).catch(() => {});
-  });
-  return link;
-}
-
-function appendAbout(box: HTMLElement): void {
-  const title = document.createElement("div");
-  title.className = "side-section-title about-title";
-  title.textContent = "ABOUT";
-  box.appendChild(title);
-
-  const version = document.createElement("div");
-  version.className = "about-version";
-  version.textContent = "Skylark";
-  void appVersion.then((v) => {
-    if (v) version.textContent = `Skylark ${v}`;
-  });
-  box.appendChild(version);
-
-  const repo = document.createElement("div");
-  repo.className = "about-repo";
-  repo.appendChild(externalLink("https://github.com/Ad1FPS/Skylark", "github.com/Ad1FPS/Skylark"));
-  box.appendChild(repo);
-
-  const sourcesTitle = document.createElement("div");
-  sourcesTitle.className = "about-sources-title";
-  sourcesTitle.textContent = "Data sources";
-  box.appendChild(sourcesTitle);
-
-  const sources = document.createElement("ul");
-  sources.className = "about-sources";
-  const add = (...parts: (string | Node)[]): void => {
-    const line = document.createElement("li");
-    for (const part of parts) line.append(part);
-    sources.appendChild(line);
-  };
-
-  add("Weather data by ", externalLink("https://open-meteo.com/", "Open-Meteo.com"), ", licence ", externalLink(CC_BY, "CC BY 4.0"));
-  add("Radar by ", externalLink("https://librewxr.net/", "LibreWXR"), ", ", externalLink(CC_BY, "CC BY 4.0"), "; Italian radar: Radar-DPC (Dipartimento della Protezione Civile)");
-  add("Map data \u00A9 ", externalLink("https://www.openstreetmap.org/copyright", "OpenStreetMap contributors"));
-  add("US alerts: ", externalLink("https://www.weather.gov/", "National Weather Service"));
-  add("Canadian alerts: ", externalLink("https://weather.gc.ca/", "Environment and Climate Change Canada"));
-  add("German alerts: Deutscher Wetterdienst via ", externalLink("https://brightsky.dev/", "Bright Sky"));
-  add("European alerts: ", externalLink("https://meteoalarm.org", "MeteoAlarm (EUMETNET)"));
-  add(
-    "Region lookup: ",
-    externalLink("https://nominatim.openstreetmap.org/", "Nominatim"),
-    " \u00A9 ",
-    externalLink("https://www.openstreetmap.org/copyright", "OpenStreetMap contributors"),
-  );
-  add("IP location: ", externalLink("https://ipwho.is/", "ipwho.is"));
-  box.appendChild(sources);
-}
 
 const cache = new Map<string, WeatherBundle>();
 const fetching = new Set<string>();
@@ -184,10 +116,7 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
   const list = document.createElement("div");
   list.className = "side-list";
 
-  const settingsBox = document.createElement("div");
-  settingsBox.className = "side-settings";
-
-  root.append(searchWrap, locateWrap, results, list, settingsBox);
+  root.append(searchWrap, locateWrap, results, list);
 
   let reqId = 0;
   let timer: number | undefined;
@@ -421,120 +350,14 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
     for (const p of pendingSkies) addMiniSky(p.sky, p.scene);
   };
 
-  const renderSettings = (): void => {
-    const s = state.settings;
-    settingsBox.innerHTML = `<div class="side-section-title">SETTINGS</div>`;
-    settingsBox.appendChild(segmented([
-      { label: "\u00B0C", value: "c", active: s.temp === "c" },
-      { label: "\u00B0F", value: "f", active: s.temp === "f" },
-    ], (v) => update({ ...state.settings, temp: v as Settings["temp"] })));
-    settingsBox.appendChild(segmented([
-      { label: "km/h", value: "kmh", active: s.wind === "kmh" },
-      { label: "mph", value: "mph", active: s.wind === "mph" },
-      { label: "m/s", value: "ms", active: s.wind === "ms" },
-    ], (v) => update({ ...state.settings, wind: v as Settings["wind"] })));
-    settingsBox.appendChild(segmented([
-      { label: "24h", value: "24", active: s.clock === "24" },
-      { label: "12h", value: "12", active: s.clock === "12" },
-    ], (v) => update({ ...state.settings, clock: v as Settings["clock"] })));
-    settingsBox.appendChild(segmented([
-      { label: "30 fps", value: "30", active: s.fps === "30" },
-      { label: "60 fps", value: "60", active: s.fps === "60" },
-    ], (v) => update({ ...state.settings, fps: v as Settings["fps"] })));
-    const iconLabel = document.createElement("div");
-    iconLabel.className = "side-setting-label";
-    iconLabel.textContent = "Weather icons";
-    settingsBox.append(iconLabel, segmented([
-      { label: "Mono", value: "mono", active: s.icons === "mono" },
-      { label: "Color", value: "color", active: s.icons === "color" },
-    ], (v) => update({ ...state.settings, icons: v as Settings["icons"] })));
-    // Only offered inside the real app; the browser preview has no autostart plugin.
-    const keepLabel = document.createElement("div");
-    keepLabel.className = "side-setting-label";
-    keepLabel.textContent = "Keep ready when closed";
-    keepLabel.title = "On: closing the window only hides it, so it reopens instantly but about 110 MB stays in use. Off: the window is freed (about 6 MB) and takes a moment to reopen.";
-    settingsBox.append(keepLabel, segmented([
-      { label: "Off", value: "off", active: s.keepAlive === "off" },
-      { label: "On", value: "on", active: s.keepAlive === "on" },
-    ], (v) => update({ ...state.settings, keepAlive: v as Settings["keepAlive"] })));
-    const alertLabel = document.createElement("div");
-    alertLabel.className = "side-setting-label";
-    alertLabel.textContent = "Alert notifications";
-    alertLabel.title = "Show a system notification when a new official weather warning (moderate or worse) is issued for your current location. Available in the US, Canada, Germany and most of Europe.";
-    settingsBox.append(alertLabel, segmented([
-      { label: "Off", value: "off", active: s.alertNotifications === "off" },
-      { label: "On", value: "on", active: s.alertNotifications === "on" },
-    ], (v) => update({ ...state.settings, alertNotifications: v as Settings["alertNotifications"] })));
-    const alertCoverage = document.createElement("div");
-    alertCoverage.className = "side-setting-label";
-    alertCoverage.textContent = "Official alerts are available for the US, Canada, Germany and 38 other European countries.";
-    settingsBox.appendChild(alertCoverage);
-    if (autostart !== null) {
-      const label = document.createElement("div");
-      label.className = "side-setting-label";
-      label.textContent = "Start with Windows";
-      settingsBox.append(label, segmented([
-        { label: "Off", value: "off", active: !autostart },
-        { label: "On", value: "on", active: autostart },
-      ], (v) => void setAutostart(v === "on")));
-    }
-    appendAbout(settingsBox);
-  };
-
-  let autostart: boolean | null = null;
-  const setAutostart = async (on: boolean): Promise<void> => {
-    try {
-      if (on) await enable();
-      else await disable();
-      autostart = (await isEnabled()) === true;
-    } catch {
-      /* keep the previous state */
-    }
-    renderSettings();
-  };
-  void isEnabled()
-    .then((v) => {
-      if (typeof v === "boolean") {
-        autostart = v;
-        renderSettings();
-      }
-    })
-    .catch(() => {});
-
-  interface Seg { label: string; value: string; active: boolean; }
-  const segmented = (items: Seg[], onPick: (v: string) => void): HTMLElement => {
-    const box = document.createElement("div");
-    box.className = "seg";
-    for (const it of items) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = `seg-btn${it.active ? " active" : ""}`;
-      btn.textContent = it.label;
-      btn.addEventListener("click", () => onPick(it.value));
-      box.appendChild(btn);
-    }
-    return box;
-  };
-
-  let lastSettings = state.settings;
-  const update = (s: Settings): void => {
-    set({ settings: s });
-    saveSettings(s);
-  };
-
   subscribe((s) => {
     if (s.saved !== undefined) renderList();
-    if (s.settings !== lastSettings) {
-      lastSettings = s.settings;
-      renderSettings();
-    }
   });
 
   // Re-draw the rows when a city's alerts change (only fires on real changes, so no loop).
   onAlertsChange(() => renderList());
 
   renderList();
-  renderSettings();
 
   window.setInterval(() => {
     for (const el of list.querySelectorAll<HTMLElement>(".city-time[data-offset]")) {
