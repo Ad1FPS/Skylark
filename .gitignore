@@ -40,3 +40,4 @@ release-test/
 *-setup.exe
 *-setup.exe.sig
 tools/pre-push-guard.sh
+DESIGN.md
