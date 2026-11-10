@@ -43,7 +43,9 @@ The release exe is about 6 MB; the installer is about 2 MB.
 
 ## Install
 
-Download `Skylark_0.1.2_x64-setup.exe` from [GitHub Releases](https://github.com/Ad1FPS/Skylark/releases/latest) and run it.
+Download `Skylark_0.1.3_x64_en-US.msi` from [GitHub Releases](https://github.com/Ad1FPS/Skylark/releases/latest) and run it. It installs into Program Files for all users, so Windows asks for permission once (and again when an update installs).
+
+Upgrading from 0.1.2 or earlier: those versions used a different setup program, so uninstall Skylark once via Settings > Apps first. Your saved cities and settings are kept.
 
 Skylark runs on Windows 10 and 11 with Microsoft Edge WebView2 (included with Windows 11; on Windows 10, install the WebView2 Runtime if Skylark does not start).
 

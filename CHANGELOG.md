@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-11-10
+
+### Changed
+
+- Skylark now ships as an MSI installer and installs into Program Files for all users (Windows asks for permission when installing and updating). The previous setup program was being flagged by Microsoft Defender as a false positive. If you installed an earlier version, uninstall it once via Settings > Apps before installing 0.1.3; your saved cities and settings are kept.
+
 ## [0.1.2] - 2026-11-10
 
 ### Fixed
@@ -36,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Automatic updates: a daily check of GitHub Releases, an update bar that asks before installing, and "Check for updates" in Settings > About.
 - Data-source credits and licence links in About.
 
+[0.1.3]: https://github.com/Ad1FPS/Skylark/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Ad1FPS/Skylark/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Ad1FPS/Skylark/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Ad1FPS/Skylark/releases/tag/v0.1.0
