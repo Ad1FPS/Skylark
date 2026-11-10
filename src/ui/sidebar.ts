@@ -12,6 +12,13 @@ import type { Scene } from "../fx/types";
 const cache = new Map<string, WeatherBundle>();
 const fetching = new Set<string>();
 
+// Rows can sit in the tray for days, so cached weather older than this is refetched in the background.
+const STALE_AFTER_SECONDS = 15 * 60;
+
+function isStale(bundle: WeatherBundle): boolean {
+  return Date.now() / 1000 - bundle.fetchedAt > STALE_AFTER_SECONDS;
+}
+
 function key(loc: Location): string {
   return `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`;
 }
@@ -195,18 +202,24 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
     }
   };
 
-  // Prefetch temps for saved cities.
+  // Prefetch temps for saved cities, and refresh them once their data goes stale.
   const ensureTemps = (saved: Location[]): void => {
+    if (document.hidden) return;
     for (const loc of saved) {
       const k = key(loc);
-      if (cache.has(k) || fetching.has(k)) continue;
+      const cached = cache.get(k);
+      // Keep showing the old row (if any) while a stale one is refreshed; never run two requests per city.
+      if (fetching.has(k) || (cached && !isStale(cached))) continue;
       void (async () => {
         fetching.add(k);
         try {
-          const cached = await getCached(loc);
-          if (cached) {
-            cache.set(k, cached);
-            renderList();
+          if (!cached) {
+            const fromCache = await getCached(loc);
+            const prev = cache.get(k);
+            if (fromCache && (!prev || fromCache.fetchedAt > prev.fetchedAt)) {
+              cache.set(k, fromCache);
+              renderList();
+            }
           }
           const fresh = await getWeather(loc, false);
           cache.set(k, fresh);
@@ -351,7 +364,16 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
   };
 
   subscribe((s) => {
-    if (s.saved !== undefined) renderList();
+    // Share the main pane's bundle, so the selected city's row matches what the pane shows.
+    const b = s.bundle;
+    if (b) {
+      const k = key(b.location);
+      if (s.saved.some((loc) => key(loc) === k)) {
+        const cached = cache.get(k);
+        if (!cached || b.fetchedAt > cached.fetchedAt) cache.set(k, b);
+      }
+    }
+    renderList();
   });
 
   // Re-draw the rows when a city's alerts change (only fires on real changes, so no loop).
@@ -364,4 +386,12 @@ export function initSidebar(root: HTMLElement, onSelect: (loc: Location) => void
       el.textContent = localClock(Number(el.dataset.offset), state.settings);
     }
   }, 15000);
+
+  // Stale rows refresh while the window is open, and immediately after it is reopened from the tray.
+  window.setInterval(() => {
+    if (!document.hidden) ensureTemps(state.saved);
+  }, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) ensureTemps(state.saved);
+  });
 }
