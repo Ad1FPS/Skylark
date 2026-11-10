@@ -43,7 +43,7 @@ The release exe is about 6 MB; the installer is about 2 MB.
 
 ## Install
 
-Download `Skylark_0.1.1_x64-setup.exe` from [GitHub Releases](https://github.com/Ad1FPS/Skylark/releases/latest) and run it.
+Download `Skylark_0.1.2_x64-setup.exe` from [GitHub Releases](https://github.com/Ad1FPS/Skylark/releases/latest) and run it.
 
 Skylark runs on Windows 10 and 11 with Microsoft Edge WebView2 (included with Windows 11; on Windows 10, install the WebView2 Runtime if Skylark does not start).
 
