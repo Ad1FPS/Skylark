@@ -19,7 +19,11 @@ export function renderHero(b: WeatherBundle, s: Settings): HTMLElement {
     summary += ` Rain in ${wetIdx * 15} min.`;
   } else {
     const wetHour = b.hourly.find((h) => (h.precipitationProbability ?? 0) >= 40);
-    if (wetHour) summary += ` Rain likely around ${clock(wetHour.time, s)}.`;
+    if (wetHour) {
+      // hourly runs 24 h ahead, so the hour may fall on tomorrow: say so instead of implying a past time today
+      const tomorrow = wetHour.time.slice(0, 10) !== c.time.slice(0, 10);
+      summary += ` Rain likely ${tomorrow ? "tomorrow " : ""}around ${clock(wetHour.time, s)}.`;
+    }
   }
 
   const stale = b.stale
